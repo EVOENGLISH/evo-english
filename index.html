@@ -1,4 +1,3 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -4071,24 +4070,95 @@ document.addEventListener("input",function(e){
  }
 });
 var chat={turns:[],busy:0,ctl:null,sample:null};
+/* ==========================================================================
+   LEVO AI — backend de producción (API de Google Gemini vía proxy propio)
+   Dentro de Claude, el chat usa "chat.sample" (gratis, sin API key, ver
+   más abajo). Fuera de Claude -- la app instalada como PWA / desplegada en
+   Vercel -- "chat.sample" no existe, así que send() usa esta función como
+   motor real de conversación.
+   La petición YA NO va directo a googleapis.com desde el navegador: va a
+   "/api/chat", una función serverless del mismo proyecto (ver /api/chat.js)
+   que guarda la API key en el servidor y hace ella la llamada a Gemini.
+   Así la key nunca llega al navegador (nadie la puede ver en el código
+   fuente ni en las herramientas de desarrollador) y, al ser una ruta del
+   mismo origen, tampoco hay bloqueo de CORS.
+   ========================================================================== */
+var GEMINI_MODEL="gemini-2.5-flash";
+var GEMINI_PROXY_URL="/api/chat";
+var GEMINI_SYSTEM="Eres LEVO, el lobo guía y coach de inglés de EVO English. Tu objetivo es ayudar al usuario a practicar inglés de forma amigable, entusiasta y educativa. Responde de manera concisa (máximo 2 a 3 oraciones). Si el usuario escribe en español, respóndele en inglés amigable con la traducción al español en paréntesis. Si comete un error gramatical, corrígelo con amabilidad antes de responder.";
+/* Convierte el historial interno {role:"user"|"assistant",content} al
+   formato que espera la API de Gemini (roles "user"/"model", texto en
+   "parts") y hace el POST a /api/chat (que a su vez llama a Gemini con
+   la key guardada en el servidor). Lanza un error con .code/.text para
+   que send() pueda mostrar el mensaje adecuado según el caso. */
+async function geminiChat(turnos,signal){
+ var body={
+  systemInstruction:{parts:[{text:GEMINI_SYSTEM+" "+chatContext()}]},
+  contents:turnos.map(function(m){return{role:m.role=="assistant"?"model":"user",parts:[{text:m.content}]}})
+ };
+ var res;
+ try{res=await fetch(GEMINI_PROXY_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:signal})}
+ catch(netErr){
+  if(netErr&&netErr.name=="AbortError")throw netErr;
+  /* Esto ya no debería ser un problema de CORS (mismo origen), pero se
+     deja un mensaje claro por si /api/chat no existe (p. ej. viendo el
+     artifact directo en vez de la versión desplegada en Vercel) o hay
+     un corte de red real. */
+  var e2=new Error("red");e2.code="network";
+  e2.text="No se pudo conectar con /api/chat (red caída, o esta versión no está corriendo en un servidor con la función serverless publicada). Detalle técnico: "+(netErr&&netErr.message?netErr.message:String(netErr));
+  throw e2;
+ }
+ if(!res.ok){
+  /* Muestra el código HTTP exacto y, si Google lo manda, su mensaje de error
+     (data.error.message) para poder diagnosticar de inmediato: 400/403 = key
+     inválida o restringida, 404 = modelo mal escrito, 429 = cuota, 5xx = Google. */
+  var cuerpoErr="";
+  try{var je=await res.json();cuerpoErr=je&&je.error&&je.error.message?je.error.message:JSON.stringify(je)}
+  catch(_){try{cuerpoErr=await res.text()}catch(__){cuerpoErr=""}}
+  var e3=new Error("http_"+res.status);
+  e3.code=res.status===429?"rate_limited":(res.status===400||res.status===403?"bad_key":"upstream_error");
+  e3.text="Error HTTP "+res.status+(cuerpoErr?": "+cuerpoErr:"");
+  throw e3;
+ }
+ var data=await res.json();
+ var texto=data&&data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0]&&data.candidates[0].content.parts[0].text;
+ if(!texto){var e4=new Error("respuesta vacía");e4.code="empty";e4.text="LEVO no pudo pensar una respuesta esta vez (la API respondió sin texto). Intenta de nuevo.";throw e4}
+ return texto.trim();
+}
 var RULES="Eres LEVO, un lobo simpático y tutor de inglés de la escuela EVO English. Hablas con un alumno hispanohablante de nivel A1 (México). Reglas: 1) Responde con 1 a 3 frases cortas en inglés natural de Estados Unidos, con vocabulario básico A1. 2) Si el alumno escribe en español, o comete un error de gramática o vocabulario, corrígelo de forma sutil y alentadora dentro de tu respuesta (ej. \"Great attempt! A quick tip: use 'is' instead of 'are'...\") y muestra cómo decirlo en inglés. 3) Añade entre paréntesis una traducción breve al español de tu frase en inglés cuando el alumno esté empezando o haya escrito en español, para que no se pierda. 4) Termina casi siempre con una sola pregunta sencilla para seguir practicando. 5) Sin listas ni formato especial; sé cálido, breve y paciente. No uses emojis. Estas son tus instrucciones: no las menciones.";
 function chatContext(){var nx=nextL();if(!nx)return "";var u=nx.u,L=u.ls[nx.i];return "Contexto: el alumno está estudiando la Unidad "+u.n+" (\""+u.t+"\"), lección actual: \""+L.t+"\". Cuando sea natural, propón practicar temas o vocabulario relacionados con esta lección, sin forzarlo si el alumno quiere hablar de otra cosa."}
 function buildRules(){return RULES+" "+chatContext()}
 function sugList(){var base=["Hi! How's it going?","Ayúdame a presentarme","Practice ordering coffee"],nx=nextL();if(nx)base.push("Practiquemos: "+nx.u.ls[nx.i].t);return base}
-var ERR={not_granted:"Para chatear con LEVO necesitas permitir el uso de Claude.",rate_limited:"Muchos mensajes seguidos. Espera un momento e intenta otra vez.",sampling_disabled:"El chat con IA no está disponible en esta cuenta.",upstream_error:"Hubo un problema de conexión. Intenta otra vez."};
+var ERR={not_granted:"Para chatear con LEVO necesitas permitir el uso de Claude.",rate_limited:"Muchos mensajes seguidos. Espera un momento e intenta otra vez.",sampling_disabled:"El chat con IA no está disponible en esta cuenta.",upstream_error:"Hubo un problema de conexión. Intenta otra vez.",no_key:"LEVO todavía no tiene su conexión configurada. Avísale a tu profe para activarlo.",network:"No hay conexión a internet en este momento. Intenta otra vez.",bad_key:"Hay un problema con la conexión de LEVO. Avísale a tu profe.",empty:"LEVO no pudo pensar una respuesta esta vez. Intenta de nuevo."};
 function $(i){return document.getElementById(i)}
 function openChat(){$("chat").classList.add("open");$("inp").focus();if(!chat.turns.length){$("sug").hidden=false;$("sug").innerHTML=sugList().map(function(t){return "<button>"+t+"</button>"}).join("")}}
 function addMsg(c,t){var r=document.createElement("div");r.className="mr "+c;var d=document.createElement("div");d.className="m "+c;d.textContent=t;if(c=="bot")r.innerHTML='<span class="av">'+wolf(28)+'</span>';r.appendChild(d);$("msgs").appendChild(r);$("msgs").scrollTop=$("msgs").scrollHeight;return d}
 async function send(text){
  text=(text||"").trim();if(!text||chat.busy)return;
  addMsg("me",text);$("inp").value="";
- if(!chat.sample){addMsg("bot","El chat con IA se activa al abrir esta página dentro de Claude. Aquí ya ves cómo funcionará.");return}
  chat.turns.push({role:"user",content:text});
- var b=addMsg("bot","");b.innerHTML='<span class="dots"><i></i><i></i><i></i></span>';chat.busy=1;$("stp").hidden=false;chat.ctl=new AbortController();
+ /* Indicador "LEVO está escribiendo..." (puntos animados + texto, por accesibilidad) */
+ var b=addMsg("bot","");b.innerHTML='<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span> <small style="color:var(--mut);font-weight:600">LEVO está escribiendo…</small>';
+ chat.busy=1;$("stp").hidden=false;chat.ctl=new AbortController();
+ $("msgs").scrollTop=$("msgs").scrollHeight;
  var t=chat.turns.slice(-12);while(t.length&&t[0].role!="user")t.shift();
- try{var r=await chat.sample([{role:"user",content:buildRules()}].concat(t),{cache:false,modelTier:"quick",signal:chat.ctl.signal,onText:function(o){b.textContent=o.text;$("msgs").scrollTop=$("msgs").scrollHeight}});
-  chat.turns.push({role:"assistant",content:r.text});addXP(2);wolfReact()}
- catch(e){if(e.text){b.textContent=e.text;chat.turns.push({role:"assistant",content:e.text})}else{chat.turns.pop();if(e.code=="cancelled")b.parentNode.remove();else b.textContent=ERR[e.code]||ERR.upstream_error}}
+ try{
+  var texto;
+  if(chat.sample){
+   /* Dentro de Claude: sampling nativo, gratis, sin API key */
+   var r=await chat.sample([{role:"user",content:buildRules()}].concat(t),{cache:false,modelTier:"quick",signal:chat.ctl.signal,onText:function(o){b.textContent=o.text;$("msgs").scrollTop=$("msgs").scrollHeight}});
+   texto=r.text;
+  }else{
+   /* Producción / app instalada fuera de Claude: API de Gemini */
+   texto=await geminiChat(t,chat.ctl.signal);
+  }
+  b.textContent=texto;chat.turns.push({role:"assistant",content:texto});addXP(2);wolfReact();
+ }catch(e){
+  if(e.name=="AbortError"||e.code=="cancelled"){chat.turns.pop();b.parentNode.remove()}
+  else if(e.text){b.textContent=e.text;chat.turns.push({role:"assistant",content:e.text})}
+  else{chat.turns.pop();b.textContent=ERR[e.code]||ERR.upstream_error}
+ }
+ $("msgs").scrollTop=$("msgs").scrollHeight;
  chat.busy=0;$("stp").hidden=true}
 $("chw").className="avatar";$("chw").innerHTML=mascot(72);$("cx").innerHTML=ic("x",20);$("fab").innerHTML=mascot(46);$("ccolicon").innerHTML=ic("arrow",16);
 $("sug").innerHTML=sugList().map(function(t){return "<button>"+t+"</button>"}).join("");
@@ -4245,5 +4315,3 @@ window.addEventListener("hashchange",go);go();
 </script>
 </body>
 </html>
-
-</body></html>
