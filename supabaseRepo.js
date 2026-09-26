@@ -145,7 +145,14 @@ var StudentRepository = (function () {
  // este dispositivo (ver StudentRepository.buscarEnCache, que usa
  // loginOnboarding.js para el reingreso instantáneo -- no aquí).
  async function login(usuario, password) {
-  var r = await rpc("login_alumno", { p_usuario: usuario, p_password: password });
+  // p_usuario/p_password son los MISMOS nombres que espera la función SQL
+  // login_alumno(p_usuario text, p_password text) -- PostgREST empareja
+  // los parámetros del RPC por nombre, no por posición, así que tienen
+  // que coincidir exactamente (ver evo-english-arreglar-login.sql). El
+  // .trim() aquí es redundante con el que ya hace loginOnboarding.js antes
+  // de llamar a este método, pero se deja también en este punto para que
+  // quede blindado sin depender de quién llame a login() en el futuro.
+  var r = await rpc("login_alumno", { p_usuario: (usuario || "").trim(), p_password: (password || "").trim() });
   if (!r.ok) {
    avisar("No se pudo conectar con la nube (" + mensajeDeError(r.error) + "). Intenta de nuevo en un momento.");
    return null;
