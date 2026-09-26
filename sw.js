@@ -10,11 +10,18 @@
 /* Sube este número cuando cambie el contenido cacheado (index.html,
    íconos, manifest) para forzar a los dispositivos a bajar la versión
    nueva en el siguiente arranque. */
-var CACHE_VERSION = "evo-english-v1";
+var CACHE_VERSION = "evo-english-v6";
 var APP_SHELL = [
  "./",
  "./index.html",
  "./manifest.json",
+ "./estiloMapa.css",
+ "./mapaAventuras.js",
+ "./estiloLogin.css",
+ "./loginOnboarding.js",
+ "./estiloAdmin.css",
+ "./panelAdmin.js",
+ "./supabaseRepo.js",
  "./icons/icon-192.png",
  "./icons/icon-512.png",
  "./icons/icon-maskable-192.png",

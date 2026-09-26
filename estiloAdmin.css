@@ -1,0 +1,69 @@
+/* ==========================================================================
+   ESTILO ADMIN — Panel de Control EVO (panelAdmin.js)
+   ==========================================================================
+   Capa fija de pantalla completa, igual que #auth-overlay pero con un
+   layout de "panel de administración" en vez de una tarjeta centrada:
+   encabezado fijo + secciones apiladas con scroll. Paleta clara (a
+   diferencia del login, que es oscuro) para que se sienta como una
+   herramienta de trabajo, no como parte de la aventura del alumno.
+   ========================================================================== */
+#admin-overlay{position:fixed;inset:0;z-index:999998;background:#F1F5FB;overflow-y:auto;
+ -webkit-font-smoothing:antialiased}
+
+.pa-wrap{max-width:920px;margin:0 auto;padding:0 16px 60px}
+
+.pa-top{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+ padding:16px 4px;margin-bottom:18px;background:rgba(241,245,251,.92);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+ border-bottom:1px solid #DCE6F8}
+.pa-brand{display:flex;align-items:center;gap:10px;font:800 18px "Space Grotesk",Arial,sans-serif;color:#0B2247}
+.pa-brand .wolf{width:40px;height:auto}
+.pa-topbtns{display:flex;gap:8px;flex-wrap:wrap}
+
+.pa-btn{display:inline-flex;align-items:center;gap:6px;min-height:42px;padding:0 16px;border-radius:12px;border:0;
+ font:700 13.5px "Space Grotesk",Arial,sans-serif;cursor:pointer}
+.pa-btn-ghost{background:#fff;border:1px solid #D3E4F7;color:#0B2247}
+.pa-btn-ghost:hover{background:#EAF1FC}
+.pa-btn-primary{background:linear-gradient(180deg,#3D95FF 0%,#0052D6 100%);color:#fff;border-bottom:4px solid #00308A;
+ box-shadow:0 6px 14px rgba(0,102,255,.3);transition:transform .08s ease,border-bottom-width .08s ease}
+.pa-btn-primary:active{transform:translateY(3px);border-bottom-width:1px}
+
+.pa-card{background:#fff;border:1px solid #E1E9F7;border-radius:20px;padding:22px;margin-bottom:20px;
+ box-shadow:0 1px 2px rgba(15,23,42,.04),0 10px 28px rgba(15,23,42,.05)}
+.pa-card h2{display:flex;align-items:center;gap:10px;font:700 18px "Space Grotesk",Arial,sans-serif;color:#0B2247;margin:0 0 16px}
+.pa-card h2 svg{color:#0066FF}
+
+.pa-form-alta{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:center}
+.pa-input{min-height:46px;border-radius:12px;border:2px solid #D3E4F7;padding:0 14px;font:500 15px "DM Sans",system-ui,sans-serif;color:#0B2247;background:#fff}
+.pa-input:focus{outline:none;border-color:#0066FF}
+@media (max-width:720px){.pa-form-alta{grid-template-columns:1fr}}
+
+.pa-err{color:#8A1F24;background:#FDEDEE;border-radius:10px;padding:8px 12px;font-size:13.5px;margin:12px 0 0}
+.pa-ok{color:#0B5B36;background:#EAF8F0;border-radius:10px;padding:8px 12px;font-size:13.5px;margin:12px 0 0}
+
+.pa-tablewrap{overflow-x:auto;margin:0 -4px}
+.pa-table{width:100%;border-collapse:collapse;min-width:640px}
+.pa-table th{text-align:left;font:700 11.5px "Space Grotesk",Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;
+ color:#7C8DAE;padding:0 12px 10px;border-bottom:1px solid #E1E9F7}
+.pa-table td{padding:12px;border-bottom:1px solid #EEF3FB;font-size:14.5px;color:#0B2247;vertical-align:middle}
+.pa-table td b{display:block;font-weight:700}
+.pa-table td small{display:block;color:#7C8DAE;font-size:12px}
+.pa-vacio{color:#7C8DAE;text-align:center;padding:24px 12px!important}
+
+.pa-pill{display:inline-block;font:700 12px "Space Grotesk",Arial,sans-serif;border-radius:99px;padding:3px 12px}
+.pa-pill.on{background:#EAF8F0;color:#0C7A45}
+.pa-pill.off{background:#FDEDEE;color:#8A1F24}
+
+.pa-acciones{display:flex;gap:6px;white-space:nowrap}
+.pa-icobtn{width:36px;height:36px;border-radius:10px;border:1px solid #D3E4F7;background:#fff;color:#0B2247;cursor:pointer;
+ display:inline-grid;place-items:center}
+.pa-icobtn:hover{background:#EAF1FC}
+.pa-icobtn-danger{color:#B83236;border-color:#F3D2D4}
+.pa-icobtn-danger:hover{background:#FDEDEE}
+
+.pa-form-config{display:flex;flex-direction:column;gap:6px;max-width:420px}
+.pa-label{font:700 12px "Space Grotesk",Arial,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#7C8DAE;margin:10px 0 2px}
+.pa-label:first-child{margin-top:0}
+.pa-hint{color:#7C8DAE;font-size:12.5px;line-height:1.4;margin:10px 0 0}
+.pa-form-config .pa-btn{margin-top:16px;align-self:flex-start}
+
+@media (prefers-reduced-motion:reduce){.pa-btn-primary{transition:none}}

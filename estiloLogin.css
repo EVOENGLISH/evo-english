@@ -1,0 +1,62 @@
+/* ==========================================================================
+   ESTILO LOGIN — hoja de estilos exclusiva de Login + Onboarding
+   ==========================================================================
+   Archivo independiente (ver loginOnboarding.js). Todo vive dentro de
+   #auth-overlay, una capa fija que cubre toda la pantalla mientras el
+   alumno no se ha identificado. z-index muy alto a propósito: debe quedar
+   por encima de TODO lo demás (fab, banner de instalar PWA, chat), aunque
+   esas piezas todavía no se hayan pintado en este punto de la carga.
+   ========================================================================== */
+#auth-overlay{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;
+ padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px));overflow-y:auto;
+ background:radial-gradient(ellipse 100% 60% at 50% -10%,#16305C 0%,#050B16 68%)}
+
+.auth-card{width:100%;max-width:380px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+ border-radius:24px;padding:28px 24px 26px;text-align:center;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+ box-shadow:0 20px 50px rgba(0,0,0,.45)}
+
+/* --- Lobo guía + bocadillo de diálogo, arriba de la tarjeta --- */
+.auth-mascota{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:14px}
+.auth-mascota .wolf,.auth-mascota svg{width:84px;height:auto}
+.auth-globo{background:#fff;color:var(--ink,#0B2247);border-radius:16px;padding:10px 16px;font:700 14.5px "Space Grotesk",Arial,sans-serif;
+ box-shadow:0 4px 12px rgba(15,23,42,.25);max-width:280px;position:relative}
+.auth-globo::after{content:"";position:absolute;top:-8px;left:50%;transform:translateX(-50%);border:8px solid transparent;border-bottom-color:#fff}
+
+.auth-h1{color:#fff;font:800 26px "Space Grotesk",Arial,sans-serif;margin:0 0 4px}
+.auth-sub{color:#B9C8E6;font-size:14px;margin:0 0 20px}
+
+/* --- Formulario --- */
+.auth-label{display:block;text-align:left;color:#9FB3D6;font:700 12px "Space Grotesk",Arial,sans-serif;
+ letter-spacing:.04em;text-transform:uppercase;margin:12px 0 6px}
+.auth-input{width:100%;min-height:50px;border-radius:14px;border:2px solid rgba(255,255,255,.16);
+ background:rgba(255,255,255,.05);color:#EAF2FF;font:600 16px "DM Sans",system-ui,sans-serif;padding:0 16px}
+.auth-input::placeholder{color:#6E85AD}
+.auth-input:focus{outline:none;border-color:#0066FF}
+.auth-err{color:#FFC2C4;background:rgba(229,72,77,.16);border-radius:10px;padding:8px 12px;font-size:13px;margin:12px 0 0;text-align:left}
+
+/* --- Botón 3D azul neón, mismo lenguaje visual que el resto de la app
+   (relieve real: fondo en degradado + borde inferior grueso que se hunde
+   al presionar, igual que .av-btn / .rcheck) --- */
+.auth-btn3d{width:100%;min-height:54px;margin-top:20px;border:0;border-radius:16px;cursor:pointer;
+ font:800 16px "Space Grotesk",Arial,sans-serif;color:#fff;
+ background:linear-gradient(180deg,#3D95FF 0%,#0052D6 100%);border-bottom:6px solid #00308A;
+ box-shadow:0 8px 20px rgba(0,102,255,.4);transition:transform .08s ease,border-bottom-width .08s ease}
+.auth-btn3d:active{transform:translateY(4px);border-bottom-width:2px}
+
+.auth-ayuda{color:#9FB3D6;font-size:13px;margin:20px 0 0;line-height:1.4}
+.auth-ayuda a{color:#14C2F5;font-weight:700;text-decoration:none}
+.auth-ayuda a:hover{text-decoration:underline}
+
+/* --- Onboarding: barra de 3 pasos y grilla de minutos --- */
+.ob-progreso{display:flex;justify-content:center;gap:8px;margin-bottom:18px}
+.ob-progreso span{width:28px;height:5px;border-radius:99px;background:rgba(255,255,255,.16)}
+.ob-progreso span.on{background:#FFD60A}
+
+.ob-min-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:6px}
+.ob-min-btn{min-height:64px;border-radius:16px;cursor:pointer;font:800 18px "Space Grotesk",Arial,sans-serif;color:#EAF2FF;
+ background:linear-gradient(180deg,#28395A 0%,#182238 100%);border:0;border-bottom:5px solid #0A1424;
+ box-shadow:0 8px 16px rgba(0,0,0,.35);transition:transform .08s ease,border-bottom-width .08s ease,background .12s,border-color .12s}
+.ob-min-btn:active{transform:translateY(4px);border-bottom-width:1px}
+.ob-min-btn.sel{background:linear-gradient(180deg,#3D95FF 0%,#0052D6 100%);border-bottom-color:#FFD60A;box-shadow:0 8px 20px rgba(0,102,255,.5)}
+
+@media (prefers-reduced-motion:reduce){.auth-btn3d,.ob-min-btn{transition:none}}
