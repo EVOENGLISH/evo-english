@@ -193,7 +193,14 @@ var LoginOnboarding = (function () {
   form.addEventListener("submit", async function (ev) {
    ev.preventDefault();
    var key = normUser(document.getElementById("login-user").value);
-   var pass = document.getElementById("login-pass").value;
+   // .trim() en la contraseña -- simétrico con registrarAlumno(), que ya
+   // recorta espacios antes de guardar. Antes había una asimetría: si el
+   // alumno (o su teclado, en el celular) agregaba un espacio de más al
+   // escribir la contraseña, el login fallaba aunque la contraseña fuera
+   // "la misma" a simple vista. El arreglo real vive en el SQL (login_alumno
+   // ahora también hace trim(p_password) del lado del servidor), pero
+   // recortamos aquí también para no depender sólo de eso.
+   var pass = document.getElementById("login-pass").value.trim();
    var errEl = document.getElementById("login-err"), boton = form.querySelector("button[type=submit]");
    if (!key || !pass) { errEl.textContent = "Escribe tu usuario y contraseña para continuar."; errEl.hidden = false; return; }
    errEl.hidden = true;
