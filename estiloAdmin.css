@@ -40,6 +40,11 @@
 .pa-err{color:#8A1F24;background:#FDEDEE;border-radius:10px;padding:8px 12px;font-size:13.5px;margin:12px 0 0}
 .pa-ok{color:#0B5B36;background:#EAF8F0;border-radius:10px;padding:8px 12px;font-size:13.5px;margin:12px 0 0}
 
+/* Buscador de alumnos: ocupa todo el ancho de la tarjeta, arriba de la
+   tabla. Reutiliza el mismo estilo de .pa-input (borde/foco) para que se
+   vea consistente con el resto del formulario. */
+.pa-buscador{display:block;width:100%;margin-bottom:14px}
+
 .pa-tablewrap{overflow-x:auto;margin:0 -4px}
 .pa-table{width:100%;border-collapse:collapse;min-width:640px}
 .pa-table th{text-align:left;font:700 11.5px "Space Grotesk",Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;

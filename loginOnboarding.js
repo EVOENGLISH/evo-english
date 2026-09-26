@@ -116,7 +116,11 @@ var LoginOnboarding = (function () {
  async function listarAlumnos() {
   var filas = await StudentRepository.adminListStudents(ADMIN_FIJO.password);
   return filas.map(function (f) {
-   return { usuario: f.usuario, nombre: f.nombre, edad: f.edad, metaMinutos: f.meta_minutos, activo: f.activo !== false, xp: f.xp || 0 };
+   // "racha" = días consecutivos activos (viene de la tabla "alumnos" en
+   // Supabase, columna "racha", ya actualizada en vivo por
+   // actualizar_progreso() cada vez que el alumno estudia -- ver
+   // sincronizarProgresoNube() en index.html).
+   return { usuario: f.usuario, nombre: f.nombre, edad: f.edad, metaMinutos: f.meta_minutos, activo: f.activo !== false, xp: f.xp || 0, racha: f.racha || 0 };
   });
  }
 

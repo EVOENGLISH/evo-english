@@ -84,6 +84,11 @@ var PanelAdmin = (function () {
    + '<td>' + (a.edad ? a.edad + ' años' : '—') + '</td>'
    + '<td>' + (a.metaMinutos ? a.metaMinutos + ' min' : '—') + '</td>'
    + '<td>' + a.xp + ' XP</td>'
+   // Racha de días activos: viene de "actualizar_progreso()" (RPC de
+   // autoservicio), que el propio alumno dispara cada vez que estudia
+   // (ver sincronizarProgresoNube() en index.html) -- por eso este valor
+   // se actualiza solo, sin que el admin tenga que hacer nada.
+   + '<td>' + (a.racha > 0 ? '🔥 ' + a.racha + (a.racha === 1 ? ' día' : ' días') : '—') + '</td>'
    + '<td><span class="pa-pill ' + (a.activo ? 'on' : 'off') + '">' + (a.activo ? 'Activo' : 'Pausado') + '</span></td>'
    + '<td class="pa-acciones">'
    + '<button type="button" class="pa-icobtn" data-a="pa-passw" title="Cambiar contraseña">' + ic("pencil", 16) + '</button>'
@@ -91,15 +96,18 @@ var PanelAdmin = (function () {
    + '<button type="button" class="pa-icobtn pa-icobtn-danger" data-a="pa-del" title="Eliminar alumno">' + ic("x", 16) + '</button>'
    + '</td></tr>';
  }
- // Fila especial mientras se espera la respuesta de la nube, y fila
- // "vacía" cuando ya llegó la respuesta pero no hay alumnos todavía.
- var FILA_CARGANDO = '<tr><td colspan="6" class="pa-vacio">Cargando alumnos desde la nube…</td></tr>';
- var FILA_VACIA = '<tr><td colspan="6" class="pa-vacio">Todavía no hay alumnos registrados. Usa el formulario de arriba para crear el primero.</td></tr>';
+ // Fila especial mientras se espera la respuesta de la nube, fila "vacía"
+ // cuando ya llegó la respuesta pero no hay alumnos todavía, y fila "sin
+ // resultados" cuando SÍ hay alumnos pero ninguno coincide con la búsqueda.
+ var FILA_CARGANDO = '<tr><td colspan="7" class="pa-vacio">Cargando alumnos desde la nube…</td></tr>';
+ var FILA_VACIA = '<tr><td colspan="7" class="pa-vacio">Todavía no hay alumnos registrados. Usa el formulario de arriba para crear el primero.</td></tr>';
+ var FILA_SIN_RESULTADOS = '<tr><td colspan="7" class="pa-vacio">Ningún alumno coincide con esa búsqueda.</td></tr>';
  function seccionAlumnos() {
   return '<section class="pa-card">'
    + '<h2>' + ic("book", 20) + ' Alumnos registrados</h2>'
+   + '<input class="pa-input pa-buscador" id="pa-buscar" type="text" placeholder="Buscar alumno por nombre o usuario…" autocomplete="off">'
    + '<div class="pa-tablewrap"><table class="pa-table"><thead><tr>'
-   + '<th>Nombre</th><th>Edad</th><th>Meta diaria</th><th>XP</th><th>Estado</th><th></th>'
+   + '<th>Nombre</th><th>Edad</th><th>Meta diaria</th><th>XP</th><th>Racha</th><th>Estado</th><th></th>'
    + '</tr></thead><tbody id="pa-tbody">' + FILA_CARGANDO + '</tbody></table></div>'
    + '</section>';
  }
@@ -125,13 +133,42 @@ var PanelAdmin = (function () {
  /* ---------------------------------------------------------------------
   * Carga / refresco de la tabla (asíncronos: hablan con Supabase)
   * --------------------------------------------------------------------- */
+ // Última lista completa que llegó de la nube (sin filtrar). El buscador
+ // filtra sobre esta copia en memoria -- así escribir en la barra de
+ // búsqueda es instantáneo, sin tener que volver a pedirle nada a
+ // Supabase en cada tecla.
+ var ULTIMA_LISTA = [];
+
  // Se llama una sola vez, justo después de dibujar el panel.
  async function cargarTablaInicial() {
   await refrescarTabla();
  }
+
+ // Pinta el <tbody> a partir de ULTIMA_LISTA, aplicando el texto actual
+ // del buscador (si el campo no existe todavía o está vacío, se pintan
+ // todos los alumnos). Se usa tanto al escribir en el buscador como
+ // después de cada refrescarTabla(), para que un filtro activo se
+ // mantenga aplicado tras registrar/pausar/eliminar a alguien.
+ function pintarTabla() {
+  var tbody = document.getElementById("pa-tbody");
+  if (!tbody) return;
+  var campo = document.getElementById("pa-buscar");
+  var termino = campo ? campo.value.trim().toLowerCase() : "";
+  var lista = !termino ? ULTIMA_LISTA : ULTIMA_LISTA.filter(function (a) {
+   return (a.nombre || "").toLowerCase().indexOf(termino) !== -1
+    || (a.usuario || "").toLowerCase().indexOf(termino) !== -1;
+  });
+  if (!lista.length) {
+   tbody.innerHTML = ULTIMA_LISTA.length ? FILA_SIN_RESULTADOS : FILA_VACIA;
+  } else {
+   tbody.innerHTML = lista.map(filaAlumno).join("");
+  }
+ }
+
  // Vuelve a pedir la lista de alumnos a StudentRepository (nube, con
- // respaldo local si no hay conexión) y repinta el <tbody>. Se usa tanto
- // al abrir el panel como después de cada alta/baja/cambio.
+ // respaldo local si no hay conexión), la guarda en ULTIMA_LISTA y
+ // repinta el <tbody> (respetando el texto de búsqueda si había uno). Se
+ // usa tanto al abrir el panel como después de cada alta/baja/cambio.
  // Devuelve la lista que acaba de pintar (además de repintar el <tbody>):
  // así, quien llama a refrescarTabla() puede reutilizar esa misma lista
  // (por ejemplo, para comprobar si un alumno recién registrado ya
@@ -144,11 +181,17 @@ var PanelAdmin = (function () {
   // sesión o el panel mientras esperábamos la respuesta de la nube.
   tbody = document.getElementById("pa-tbody");
   if (!tbody) return alumnos;
-  tbody.innerHTML = alumnos.length ? alumnos.map(filaAlumno).join("") : FILA_VACIA;
+  ULTIMA_LISTA = alumnos;
+  pintarTabla();
   return alumnos;
  }
 
  function wireEventos() {
+  // Buscador en tiempo real: filtra por nombre O usuario en cada tecla,
+  // sin volver a pedirle nada a la nube (usa la copia en ULTIMA_LISTA).
+  // Al borrar el texto, pintarTabla() vuelve a mostrar a todos.
+  document.getElementById("pa-buscar").addEventListener("input", pintarTabla);
+
   document.getElementById("pa-form-alta").addEventListener("submit", async function (ev) {
    ev.preventDefault();
    var nombre = document.getElementById("pa-nombre").value;
