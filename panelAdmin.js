@@ -190,7 +190,7 @@ var PanelAdmin = (function () {
     errEl.hidden = false;
     return;
    }
-   okEl.textContent = "Alumno \"" + nombre + "\" registrado. Ya puede iniciar sesión con su usuario y contraseña."; okEl.hidden = false;
+   okEl.textContent = "¡Alumno \"" + nombre + "\" registrado con éxito en la nube! Ya puede iniciar sesión con su usuario y contraseña."; okEl.hidden = false;
    document.getElementById("pa-form-alta").reset();
   });
 

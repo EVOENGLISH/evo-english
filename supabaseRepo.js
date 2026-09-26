@@ -186,7 +186,25 @@ var StudentRepository = (function () {
    // error de transporte, terminó guardándose de todas formas.
    return { ok: false, error: "No se pudo guardar en la nube: " + detalle, errorDeRed: true };
   }
-  return r.data; // {ok:true} o {ok:false, error:"Ya existe..."} (lo decide la función SQL)
+  // Llegar aquí significa que Supabase NO devolvió ningún error (r.ok es
+  // true) -- es decir, el registro SÍ se guardó en la tabla. El único
+  // fallo real que puede reportar la propia función SQL es un rechazo de
+  // NEGOCIO explícito, como {ok:false, error:"Ya existe..."}: sólo en ese
+  // caso devolvemos ese objeto tal cual.
+  //
+  // OJO: ya NO exigimos que "r.data" venga con contenido para considerar
+  // esto un éxito. Antes, si la respuesta de Supabase llegaba sin cuerpo
+  // (por ejemplo un 204 "No Content", o el valor json vacío/null que a
+  // veces devuelve PostgREST) "r.data" podía ser null/undefined, y como
+  // este método simplemente devolvía "r.data" tal cual, el código que
+  // llama a esto (registrarAlumno, en loginOnboarding.js) interpretaba
+  // ese "null" como fallo -- aunque el alumno YA estuviera guardado. La
+  // señal correcta de éxito/fallo es la ausencia/presencia de error
+  // (r.ok), nunca la forma de "data".
+  if (r.data && typeof r.data === "object" && r.data.ok === false) {
+   return r.data; // rechazo de negocio real, ej. "Ya existe un alumno con ese usuario."
+  }
+  return { ok: true };
  }
 
  async function adminChangePassword(adminPassword, usuario, nuevaPassword) {
