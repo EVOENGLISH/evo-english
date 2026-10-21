@@ -253,16 +253,21 @@ var StudentRepository = (function () {
   return r.data;
  }
 
- // Progreso (nivel, xp, racha) — se llama en segundo plano desde
- // savep() en index.html. NO muestra avisos visibles en cada error:
+ // Progreso (nivel, xp, racha, insignia nueva) — se llama en segundo plano
+ // desde savep() en index.html. NO muestra avisos visibles en cada error:
  // sería molesto interrumpir al alumno mientras estudia por un problema
  // de red pasajero. El progreso local sigue intacto de todas formas.
+ // "progressData.insigniaNueva" (opcional) manda UNA insignia a la vez --
+ // la función SQL "actualizar_progreso" la agrega sin duplicar y también
+ // sube "racha_record" (el récord personal) cuando corresponde. Ver
+ // migración "gamificacion_fase1_rachas_insignias_clasificacion".
  async function updateProgress(usuario, progressData) {
   var r = await rpc("actualizar_progreso", {
    p_usuario: usuario,
    p_nivel: progressData.nivel != null ? progressData.nivel : null,
    p_xp: progressData.xp != null ? progressData.xp : null,
-   p_racha: progressData.racha != null ? progressData.racha : null
+   p_racha: progressData.racha != null ? progressData.racha : null,
+   p_insignia_nueva: progressData.insigniaNueva != null ? progressData.insigniaNueva : null
   });
   if (r.ok) {
    var actual = buscarEnCache(usuario);
@@ -275,6 +280,34 @@ var StudentRepository = (function () {
   return r.ok ? r.data : { ok: false };
  }
 
+ // Perfil de gamificación (récord de racha + insignias) de UN alumno --
+ // se llama justo después de iniciar sesión, para traer lo que ya tenía
+ // guardado en la nube sin tener que tocar login_alumno.
+ async function obtenerPerfilGamificacion(usuario) {
+  var r = await rpc("perfil_gamificacion", { p_usuario: usuario });
+  if (!r.ok) return null;
+  var fila = (r.data && r.data[0]) || null;
+  return fila; // {racha_record, insignias} o null si no hay conexión
+ }
+
+ // Clasificación pública entre los alumnos activos de la escuela (nombre,
+ // xp, racha, nivel -- nunca password ni datos privados). Si no hay
+ // conexión, devuelve una lista vacía: la pantalla de clasificación ya
+ // sabe mostrar su propio estado de "sin conexión" en ese caso.
+ async function obtenerClasificacion(limite) {
+  var r = await rpc("clasificacion_publica", { p_limite: limite || 20 });
+  if (!r.ok) return { ok: false, lista: [] };
+  return { ok: true, lista: r.data || [] };
+ }
+
+ // NOTA: este módulo tenía aquí un método chatLevo() que llamaba a la
+ // Edge Function "chat-levo" de Supabase para el chat de LEVO AI. Esa
+ // integración se pospuso a una segunda etapa, así que se quitó de aquí
+ // junto con toda la interfaz de chat en index.html. El código de la
+ // Edge Function sigue intacto en supabase/functions/chat-levo/index.ts
+ // (nunca llegó a desplegarse) para cuando se reactive el proyecto. No
+ // queda ninguna llamada a chatLevo en el resto de la app.
+
  return {
   login: login,
   adminListStudents: adminListStudents,
@@ -284,6 +317,8 @@ var StudentRepository = (function () {
   adminDeleteStudent: adminDeleteStudent,
   completeOnboarding: completeOnboarding,
   updateProgress: updateProgress,
+  obtenerPerfilGamificacion: obtenerPerfilGamificacion,
+  obtenerClasificacion: obtenerClasificacion,
   buscarEnCache: buscarEnCache
  };
 })();

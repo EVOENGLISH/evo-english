@@ -167,15 +167,62 @@ var LoginOnboarding = (function () {
   if (!el) { el = document.createElement("div"); el.id = "auth-overlay"; document.body.appendChild(el); }
   return el;
  }
+ // Capa de fondo cinematográfico (video en loop + overlay oscuro), igual
+ // que el login de English Live: vive FUERA del contenedor que cada
+ // pantalla re-pinta (login, pasos de onboarding) para que el video nunca
+ // se reinicie ni parpadee al pasar de una pantalla a otra -- se crea una
+ // sola vez y queda detrás de todo el flujo de autenticación.
+ // Reemplaza /assets/login-bg.webm + /assets/login-bg.mp4 (y opcionalmente
+ // /assets/login-bg-poster.jpg, el cuadro que se ve mientras el video
+ // carga) con tu propio archivo; si ninguno de los dos existe o el
+ // navegador no puede reproducir ninguno, el <video> se oculta solo (ver
+ // el "error" más abajo) y queda el fondo degradado oscuro de
+ // #auth-overlay de toda la vida -- la pantalla nunca se rompe.
+ // Se ofrecen dos formatos porque ningún navegador soporta los dos: WebM
+ // (VP9) primero por ser más liviano (lo usan Chrome, Firefox, Edge...),
+ // y MP4 (H.264) como respaldo obligatorio para Safari/iOS, que no
+ // reproduce WebM. El navegador elige solo el primero que sí sabe tocar.
+ function fondoCinematico() {
+  if (document.getElementById("auth-bgvideo")) return;
+  var bg = document.createElement("div");
+  bg.id = "auth-bgvideo";
+  bg.setAttribute("aria-hidden", "true");
+  bg.innerHTML =
+   '<video class="auth-bgvideo-el" autoplay muted loop playsinline poster="assets/login-bg-poster.jpg">'
+   + '<source src="assets/login-bg.webm" type="video/webm">'
+   + '<source src="assets/login-bg.mp4" type="video/mp4">'
+   + '</video>'
+   + '<div class="auth-bgoverlay"></div>';
+  overlay().appendChild(bg);
+  var video = bg.querySelector("video");
+  // Sin archivo de video (404) o formato no soportado: se oculta la capa
+  // entera y queda sólo el overlay oscuro + el fondo degradado de siempre.
+  video.addEventListener("error", function () { bg.style.display = "none"; });
+  // Alguien con "reducir movimiento" activado en su sistema: se pausa el
+  // video (queda el poster/último cuadro, quieto) en vez de forzarle una
+  // animación de fondo constante.
+  try {
+   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) video.pause();
+  } catch (e) {}
+ }
+ // Contenedor donde cada pantalla (login, pasos de onboarding) pinta su
+ // propio HTML -- separado de fondoCinematico() para que reemplazar este
+ // innerHTML nunca toque ni reinicie el <video> de fondo.
+ function contenedor() {
+  fondoCinematico();
+  var c = document.getElementById("auth-content");
+  if (!c) { c = document.createElement("div"); c.id = "auth-content"; overlay().appendChild(c); }
+  return c;
+ }
  function quitarOverlay() { var el = document.getElementById("auth-overlay"); if (el) el.remove(); }
  function waLink() { var c = leerConfig(); return "https://wa.me/" + c.paisSoporte + soloDigitos(c.telefonoSoporte); }
  function soloDigitos(s) { return (s || "").replace(/\D/g, ""); }
 
  function pintarLogin(cont) {
   var c = leerConfig();
-  overlay().innerHTML =
+  contenedor().innerHTML =
    '<div class="auth-card">'
-   + '<div class="auth-mascota">' + mascot(84) + '<div class="auth-globo">¡Hola, futuro bilingüe!</div></div>'
+   + '<div class="auth-mascota">' + EvoMascot(84, "welcome") + '<div class="auth-globo">¡Hola, futuro bilingüe!</div></div>'
    + '<h1 class="auth-h1">EVO English</h1>'
    + '<p class="auth-sub">Inicia sesión para continuar tu aventura</p>'
    + '<form id="login-screen" novalidate>'
@@ -243,6 +290,7 @@ var LoginOnboarding = (function () {
   if (!u.onboardingCompleto) { pintarPaso1(key, u, cont); return; }
   quitarOverlay();
   window.cargarProgParaUsuario(key);
+  if (typeof window.mezclarPerfilGamificacionNube === "function") window.mezclarPerfilGamificacionNube(key);
   cont();
  }
 
@@ -261,7 +309,7 @@ var LoginOnboarding = (function () {
 
  function pintarPaso1(key, u, cont) {
   datos = { key: key };
-  overlay().innerHTML = marcoPaso(1, "¡Hola! ¿Cuál es tu nombre completo?",
+  contenedor().innerHTML = marcoPaso(1, "¡Hola! ¿Cuál es tu nombre completo?",
    '<form id="ob-paso1" novalidate>'
    // Precargado con el nombre que el admin escribió al registrarlo; el
    // alumno lo puede confirmar o corregir (p.ej. si prefiere un apodo).
@@ -280,7 +328,7 @@ var LoginOnboarding = (function () {
  }
 
  function pintarPaso2(cont) {
-  overlay().innerHTML = marcoPaso(2, "Mucho gusto, " + esc(datos.nombre) + ". ¿Cuántos años tienes?",
+  contenedor().innerHTML = marcoPaso(2, "Mucho gusto, " + esc(datos.nombre) + ". ¿Cuántos años tienes?",
    '<form id="ob-paso2" novalidate>'
    + '<input class="auth-input" id="ob-edad" type="number" inputmode="numeric" min="3" max="99" required placeholder="Tu edad">'
    + '<p class="auth-err" id="ob-err2" hidden>Escribe una edad válida (entre 3 y 99).</p>'
@@ -297,7 +345,7 @@ var LoginOnboarding = (function () {
  }
 
  function pintarPaso3(cont) {
-  overlay().innerHTML = marcoPaso(3, "¿Cuántos minutos al día te comprometes a entrenar?",
+  contenedor().innerHTML = marcoPaso(3, "¿Cuántos minutos al día te comprometes a entrenar?",
    '<div class="ob-min-grid" id="ob-min-grid">'
    + METAS_MIN.map(function (m) { return '<button type="button" class="ob-min-btn" data-min="' + m + '">' + m + ' min</button>'; }).join("")
    + '</div>'
@@ -325,6 +373,7 @@ var LoginOnboarding = (function () {
    await StudentRepository.completeOnboarding(datos.key, { nombre: datos.nombre, edad: datos.edad, metaMinutos: datos.metaMinutos });
    aplicarUsuarioActual(datos.key, u);
    window.cargarProgParaUsuario(datos.key);
+   if (typeof window.mezclarPerfilGamificacionNube === "function") window.mezclarPerfilGamificacionNube(datos.key);
    quitarOverlay();
    cont(); // arranca el router (go()) ya con el perfil y el progreso cargados
   });

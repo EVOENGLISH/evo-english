@@ -43,7 +43,7 @@ var PanelAdmin = (function () {
   panel().innerHTML =
    '<div class="pa-wrap">'
    + '<header class="pa-top">'
-   + '<div class="pa-brand">' + mascot(40) + '<b>Panel de Control EVO</b></div>'
+   + '<div class="pa-brand">' + wolf(40) + '<b>Panel de Control EVO</b></div>'
    + '<div class="pa-topbtns">'
    + '<button type="button" class="pa-btn pa-btn-ghost" data-a="pa-modo-alumno">' + ic("play", 16) + ' Modo Alumno / Vista previa</button>'
    + '<button type="button" class="pa-btn pa-btn-ghost" data-a="pa-logout">' + ic("lock", 16) + ' Cerrar sesión</button>'

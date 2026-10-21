@@ -4,16 +4,44 @@
    Archivo independiente (ver loginOnboarding.js). Todo vive dentro de
    #auth-overlay, una capa fija que cubre toda la pantalla mientras el
    alumno no se ha identificado. z-index muy alto a propósito: debe quedar
-   por encima de TODO lo demás (fab, banner de instalar PWA, chat), aunque
-   esas piezas todavía no se hayan pintado en este punto de la carga.
+   por encima de TODO lo demás (banner de instalar PWA, etc.), aunque esas
+   piezas todavía no se hayan pintado en este punto de la carga.
+
+   #auth-overlay tiene dos hijos fijos, uno encima del otro:
+   1) #auth-bgvideo — el video de fondo en loop + el overlay oscuro.
+   2) #auth-content — donde se pinta cada pantalla (login, pasos de
+      onboarding); .auth-card queda centrada ahí con acabado glassmorphism
+      para leerse bien sobre el video.
    ========================================================================== */
-#auth-overlay{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;
- padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px));overflow-y:auto;
+#auth-overlay{position:fixed;inset:0;z-index:999999;overflow-y:auto;
  background:radial-gradient(ellipse 100% 60% at 50% -10%,#16305C 0%,#050B16 68%)}
 
-.auth-card{width:100%;max-width:380px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
- border-radius:24px;padding:28px 24px 26px;text-align:center;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
- box-shadow:0 20px 50px rgba(0,0,0,.45)}
+/* --- Fondo cinematográfico: video en loop + overlay oscuro ---
+   #auth-bgvideo es un hermano fijo de #auth-content (ambos hijos directos
+   de #auth-overlay), así que nunca se destruye al cambiar de pantalla
+   (login -> onboarding). Si el video no carga, esta capa se oculta por JS
+   (ver fondoCinematico() en loginOnboarding.js) y queda el degradado de
+   #auth-overlay de arriba como respaldo -- la pantalla nunca se ve rota. */
+#auth-bgvideo{position:fixed;inset:0;z-index:0;overflow:hidden;background:#050B16}
+.auth-bgvideo-el{position:absolute;top:50%;left:50%;width:100%;height:100%;min-width:100%;min-height:100%;
+ transform:translate(-50%,-50%);object-fit:cover}
+/* Overlay oscuro (misma idea que English Live): degradado, no un negro
+   plano, para que se note todavía la textura del video pero el texto de
+   la tarjeta quede siempre legible encima. Más claro que antes (menos
+   opaco) para que el video se note bien; la tarjeta sigue legible porque
+   además tiene su propio fondo semitransparente + blur (glassmorphism). */
+.auth-bgoverlay{position:absolute;inset:0;
+ background:linear-gradient(180deg,rgba(5,11,22,.28) 0%,rgba(5,11,22,.4) 55%,rgba(5,11,22,.56) 100%)}
+
+#auth-content{position:relative;z-index:1;min-height:100%;display:flex;align-items:center;justify-content:center;
+ padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+
+/* --- Tarjeta glassmorphism: vidrio esmerilado sobre el video, con un
+   borde interno sutil de luz para que se note el relieve del cristal --- */
+.auth-card{width:100%;max-width:380px;background:rgba(16,28,48,.42);border:1px solid rgba(255,255,255,.18);
+ border-radius:24px;padding:28px 24px 26px;text-align:center;
+ -webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);
+ box-shadow:0 24px 60px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.14)}
 
 /* --- Lobo guía + bocadillo de diálogo, arriba de la tarjeta --- */
 .auth-mascota{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:14px}
