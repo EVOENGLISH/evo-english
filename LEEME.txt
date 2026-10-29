@@ -1,0 +1,27 @@
+Fotos para la landing page de EVO ENGLISH
+==========================================
+
+YA ESTÁN PUESTAS en landing.html (no hay que hacer nada más con estas):
+
+1. hero-estudiante.jpg          -> Portada: joven estudiando con tablet
+2. practica-conversacion.jpg    -> Dos personas practicando una conversación
+3. experiencia-digital.jpg      -> Persona usando la app en laptop/tablet
+4. comunidad.jpg                -> Grupo diverso de estudiantes
+
+NOTA sobre "practica-conversacion.jpg": la foto que mandaste tiene un globo
+de texto en inglés dibujado dentro de la imagen. El brief original pedía
+que las fotos no llevaran texto incrustado. La dejé puesta por ahora para
+no atrasar el avance, pero si quieres, podemos pedirle a Gemini una versión
+igual pero sin los globos de texto y la reemplazo (mismo nombre de archivo,
+sin tocar nada más).
+
+TODAVÍA FALTA:
+
+5. estudio-individual.jpg       -> Persona estudiando sola desde casa
+   (Formato sugerido: .jpg, menos de 300 KB, ancho máx. 1600px)
+   Esta foto aún no tiene un lugar fijo en la página -- en cuanto la
+   mandes, le buscamos un espacio (por ejemplo, junto a la sección
+   "Por qué EVO ENGLISH" o en una nueva sección corta).
+
+Mientras no subas estudio-individual.jpg, no pasa nada: la página sigue
+funcionando normal, simplemente esa foto no se usa todavía.
