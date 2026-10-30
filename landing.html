@@ -142,6 +142,13 @@ footer .cols a:hover{color:var(--cian-d)}
 .photo-section .txt h2.h2{text-align:left;margin-bottom:14px}
 .photo-section .txt p.sub{text-align:left;margin:0 0 20px;max-width:none}
 @media (max-width:860px){.photo-section{grid-template-columns:1fr}.photo-section .txt h2.h2,.photo-section .txt p.sub{text-align:center}}
+
+.price button.btn{border:0;cursor:pointer;font:inherit;font-weight:800}
+.price button.btn:disabled{opacity:.6;cursor:wait}
+.pago-sec{font-size:.8rem;color:var(--mut);margin:12px 0 4px}
+.pago-wa{font-size:.85rem;color:var(--cian-d);font-weight:700}
+.pago-aviso{border-radius:10px;padding:10px 14px;font-size:.9rem;margin-bottom:14px;font-weight:600}
+.pago-aviso.ok{background:#E6F7EE;color:#0B6B3A}.pago-aviso.err{background:#FFF3DF;color:#8A5A0A}
 </style></head><body>
 <div class="promo-bar"><span class="tag">PROMO DE LANZAMIENTO</span> $59/mes en vez de $850/mes — <a href="#precio">ver condiciones</a></div>
 <header class="top"><div class="wrap">
@@ -163,7 +170,7 @@ footer .cols a:hover{color:var(--cian-d)}
 <div>
 <h1>Aprende inglés de verdad,<br>a <span class="hl">tu ritmo</span>, todos los días</h1>
 <p class="lead">Mapa de aventuras, cuentos interactivos, retos de speaking y gamificación — todo guiado por LEVO, tu mentor. Práctica diaria que sí se siente como avanzar.</p>
-<div class="cta"><a class="btn big" href="./index.html">Entrar a la app</a><a class="btn ghost big" href="#precio">Ver precio</a></div>
+<div class="cta"><a class="btn big js-suscribir" href="#precio">Suscribirme</a><a class="btn ghost big" href="#precio">Ver precio</a></div>
 </div>
 <div class="hero-photo">
 <div class="foto-ph filled" style="aspect-ratio:4/5"><img src="hero-estudiante.jpg" alt="Joven estudiante practicando inglés con una tablet"></div>
@@ -236,7 +243,7 @@ footer .cols a:hover{color:var(--cian-d)}
 <div class="txt">
 <h2 class="h2">Estudia desde donde estés</h2>
 <p class="sub">Abre EVO ENGLISH en tu celular, tablet o computadora y practica unos minutos al día, cuando tú puedas.</p>
-<a class="btn" href="./index.html">Entrar a la app</a>
+<a class="btn js-suscribir" href="#precio">Suscribirme</a>
 </div>
 </div>
 </div></section>
@@ -246,7 +253,7 @@ footer .cols a:hover{color:var(--cian-d)}
 <div class="txt">
 <h2 class="h2">Practica conversaciones reales</h2>
 <p class="sub">Los retos de speaking te ponen frases y situaciones cotidianas para que practiques en voz alta, no solo opción múltiple.</p>
-<a class="btn" href="./index.html">Entrar a la app</a>
+<a class="btn js-suscribir" href="#precio">Suscribirme</a>
 </div>
 </div>
 </div></section>
@@ -268,7 +275,35 @@ footer .cols a:hover{color:var(--cian-d)}
 <p class="old">Precio normal: $850/mes</p>
 <p class="now">$59<span>/mes</span></p>
 <p class="nota">Precio especial de lanzamiento, acceso completo a la app. Puedes cancelar cuando quieras, sin penalización.</p>
-<a class="btn amber" href="https://wa.me/529163416965" target="_blank" rel="noopener">Pedir acceso por WhatsApp</a>
+<div id="pago-aviso" class="pago-aviso" role="status" hidden></div>
+<button type="button" class="btn amber js-suscribir" id="btn-suscribir">Suscribirme por $59/mes</button>
+<p class="pago-sec">Pago seguro con tarjeta a través de Stripe. Cancela cuando quieras.</p>
+<a class="pago-wa" href="https://wa.me/529163416965" target="_blank" rel="noopener">¿Dudas? Escríbenos por WhatsApp</a>
+<script>
+/* Botones "Suscribirme": piden a /api/checkout la página de pago de Stripe y
+   redirigen ahí. También muestra un aviso al volver de pagar o de cancelar. */
+(function(){
+ var botones=document.querySelectorAll(".js-suscribir"), aviso=document.getElementById("pago-aviso");
+ function msg(t,ok){aviso.textContent=t;aviso.hidden=false;aviso.className="pago-aviso "+(ok?"ok":"err");}
+ var p=new URLSearchParams(location.search).get("pago");
+ if(p==="ok")msg("¡Gracias! Tu pago se recibió. Te contactaremos por WhatsApp o correo para darte tu acceso.",true);
+ if(p==="cancelado")msg("No se hizo ningún cobro. Cuando quieras, puedes intentarlo de nuevo.",false);
+ function suscribir(e){
+  e.preventDefault();
+  var textos=[];
+  botones.forEach(function(b){textos.push(b.textContent);b.textContent="Abriendo pago seguro…";b.style.pointerEvents="none";});
+  fetch("/api/checkout",{method:"POST"}).then(function(r){return r.json();}).then(function(d){
+   if(d&&d.url){location.href=d.url;return;}
+   throw new Error((d&&d.error)||"error");
+  }).catch(function(){
+   botones.forEach(function(b,k){b.textContent=textos[k];b.style.pointerEvents="";});
+   msg("No pudimos abrir el pago. Intenta de nuevo o escríbenos por WhatsApp.",false);
+   location.hash="precio";
+  });
+ }
+ botones.forEach(function(b){b.addEventListener("click",suscribir);});
+})();
+</script>
 </div>
 </div></section>
 
@@ -286,7 +321,7 @@ footer .cols a:hover{color:var(--cian-d)}
 <section class="cta-final"><div class="wrap">
 <h2>¿Listo para empezar?</h2>
 <p>Entra a la app y da tu primer paso hoy mismo.</p>
-<a class="btn amber big" href="./index.html">Entrar a la app</a>
+<a class="btn amber big js-suscribir" href="#precio">Suscribirme</a>
 </div></section>
 
 <footer><div class="wrap">
