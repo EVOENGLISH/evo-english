@@ -74,6 +74,8 @@ var PanelAdmin = (function () {
   return '<section class="pa-card">'
    + '<h2>' + ic("users", 20) + ' Alumnos nuevos</h2>'
    + '<div class="pa-stats" id="pa-stats"><p class="pa-hint">Cargando…</p></div>'
+   + '<p class="pa-hint">Toca un periodo para ver quiénes son esos alumnos.</p>'
+   + '<div class="pa-detalle" id="pa-detalle" hidden></div>'
    + '<p class="pa-hint" id="pa-stats-nota" hidden></p>'
    + '<div class="pa-recientes" id="pa-recientes" hidden></div>'
    + '</section>';
@@ -94,9 +96,11 @@ var PanelAdmin = (function () {
   var c = datos.conteos;
   cont.innerHTML = PERIODOS.map(function (p) {
    var x = c[p[0]] || { n: 0, pago: 0 };
-   return '<div class="pa-stat"><span>' + p[1] + '</span><b>' + x.n + '</b>'
-    + '<small>' + (x.pago ? x.pago + ' de pago' : '&nbsp;') + '</small></div>';
+   return '<button type="button" class="pa-stat' + (PERIODO_SEL === p[0] ? ' sel' : '') + '" data-a="pa-per" data-per="' + p[0] + '">'
+    + '<span>' + p[1] + '</span><b>' + x.n + '</b>'
+    + '<small>' + (x.pago ? x.pago + ' de pago' : '&nbsp;') + '</small></button>';
   }).join("");
+  if (PERIODO_SEL) abrirPeriodo(PERIODO_SEL, true); // mantiene abierta la lista tras refrescar
   if (c.sin_fecha > 0) {
    nota.textContent = c.sin_fecha + " de tus " + c.total + " alumnos son anteriores a este contador y no tienen fecha de alta, así que no entran en estas cifras. Los nuevos se cuentan solos.";
    nota.hidden = false;
@@ -112,6 +116,34 @@ var PanelAdmin = (function () {
  }
  async function cargarNuevos() {
   pintarNuevos(await LoginOnboarding.usuarios.alumnosNuevos());
+ }
+
+ // Periodo abierto ahora (null = ninguno). Tocar el mismo cuadro otra vez
+ // cierra la lista; tocar otro cambia de lista.
+ var PERIODO_SEL = null;
+ async function abrirPeriodo(per, forzar) {
+  var det = document.getElementById("pa-detalle");
+  if (!det) return;
+  if (!forzar && PERIODO_SEL === per) { // segundo toque: cerrar
+   PERIODO_SEL = null; det.hidden = true;
+   document.querySelectorAll(".pa-stat.sel").forEach(function (b) { b.classList.remove("sel"); });
+   return;
+  }
+  PERIODO_SEL = per;
+  document.querySelectorAll(".pa-stat").forEach(function (b) { b.classList.toggle("sel", b.dataset.per === per); });
+  var nombrePer = (PERIODOS.filter(function (p) { return p[0] === per; })[0] || [per, per])[1];
+  det.hidden = false;
+  det.innerHTML = '<h3>' + esc(nombrePer) + '</h3><p class="pa-hint">Cargando…</p>';
+  var lista = await LoginOnboarding.usuarios.alumnosNuevosLista(per);
+  det = document.getElementById("pa-detalle");
+  if (!det || PERIODO_SEL !== per) return; // cambió de periodo o cerró el panel mientras cargaba
+  if (!lista) { det.innerHTML = '<h3>' + esc(nombrePer) + '</h3><p class="pa-hint">No se pudo cargar la lista (sin conexión con la nube).</p>'; return; }
+  if (!lista.length) { det.innerHTML = '<h3>' + esc(nombrePer) + '</h3><p class="pa-hint">No hay alumnos nuevos en este periodo.</p>'; return; }
+  det.innerHTML = '<h3>' + esc(nombrePer) + ' — ' + lista.length + (lista.length === 1 ? ' alumno' : ' alumnos') + '</h3>'
+   + lista.map(function (a) {
+    return '<div class="pa-rec"><div><b>' + esc(a.nombre) + '</b><small>@' + esc(a.usuario) + ' · ' + esc(fechaCorta(a.creado_en)) + (a.activo === false ? ' · Pausado' : '') + '</small></div>'
+     + '<span class="pa-tag ' + (a.origen === 'stripe' ? '' : 'manual') + '">' + (a.origen === 'stripe' ? 'Pagó en línea' : 'Registro manual') + '</span></div>';
+   }).join("");
  }
 
  /* ---------------------------------------------------------------------
@@ -343,6 +375,7 @@ var PanelAdmin = (function () {
    if (!top) return;
    if (top.dataset.a === "pa-modo-alumno") { panel().remove(); cbs.modoAlumno(); return; }
    if (top.dataset.a === "pa-logout") { cbs.cerrarSesion(); return; }
+   if (top.dataset.a === "pa-per") { abrirPeriodo(top.dataset.per, false); return; }
    var fila = ev.target.closest("tr[data-usuario]");
    if (!fila) return;
    var usuario = fila.dataset.usuario;

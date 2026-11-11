@@ -36,7 +36,11 @@
 @media (max-width:1100px){.pa-form-alta{grid-template-columns:1fr 1fr}}
 
 .pa-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
-.pa-stat{background:#F4F8FF;border:1px solid #DCE8FB;border-radius:14px;padding:12px 14px}
+.pa-stat{background:#F4F8FF;border:1px solid #DCE8FB;border-radius:14px;padding:12px 14px;text-align:left;font:inherit;cursor:pointer;width:100%;transition:border-color .15s,background .15s}
+.pa-stat:hover{border-color:#0066FF}
+.pa-stat.sel{background:#E3EEFF;border-color:#0066FF;box-shadow:0 0 0 2px rgba(0,102,255,.18)}
+.pa-detalle{margin-top:14px;background:#F9FBFF;border:1px solid #DCE8FB;border-radius:14px;padding:14px 16px}
+.pa-detalle h3{font:700 14px "Space Grotesk",Arial,sans-serif;color:#0B2247;margin:0 0 6px}
 .pa-stat span{display:block;font:700 11.5px "Space Grotesk",Arial,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#7C8DAE}
 .pa-stat b{display:block;font:700 30px "Space Grotesk",Arial,sans-serif;color:#0052D6;line-height:1.15;margin:2px 0}
 .pa-stat small{color:#0C7A45;font-size:12px}
