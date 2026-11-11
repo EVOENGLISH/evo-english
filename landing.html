@@ -149,6 +149,13 @@ footer .cols a:hover{color:var(--cian-d)}
 .pago-wa{font-size:.85rem;color:var(--cian-d);font-weight:700}
 .pago-aviso{border-radius:10px;padding:10px 14px;font-size:.9rem;margin-bottom:14px;font-weight:600}
 .pago-aviso.ok{background:#E6F7EE;color:#0B6B3A}.pago-aviso.err{background:#FFF3DF;color:#8A5A0A}
+.cred{background:#E6F7EE;border:2px solid #0B6B3A;border-radius:14px;padding:16px;margin-bottom:14px;text-align:left;color:#0B3F24}
+.cred h3{margin:0 0 8px;font-size:1.05rem}
+.cred .fila{display:flex;justify-content:space-between;gap:10px;background:#fff;border-radius:10px;padding:10px 12px;margin:6px 0;font-size:1rem;align-items:center}
+.cred .fila span{color:#4b5b52;font-size:.85rem}
+.cred .fila b{font-family:ui-monospace,Consolas,monospace;font-size:1.1rem;word-break:break-all;user-select:all}
+.cred p{margin:8px 0 12px;font-size:.85rem;line-height:1.4}
+.cred a.btn{display:block;text-align:center}
 </style></head><body>
 <div class="promo-bar"><span class="tag">PROMO DE LANZAMIENTO</span> $59/mes en vez de $850/mes — <a href="#precio">ver condiciones</a></div>
 <header class="top"><div class="wrap">
@@ -285,8 +292,47 @@ footer .cols a:hover{color:var(--cian-d)}
 (function(){
  var botones=document.querySelectorAll(".js-suscribir"), aviso=document.getElementById("pago-aviso");
  function msg(t,ok){aviso.textContent=t;aviso.hidden=false;aviso.className="pago-aviso "+(ok?"ok":"err");}
- var p=new URLSearchParams(location.search).get("pago");
- if(p==="ok")msg("¡Gracias! Tu pago se recibió. Te contactaremos por WhatsApp o correo para darte tu acceso.",true);
+ var qs=new URLSearchParams(location.search), p=qs.get("pago"), sid=qs.get("session_id");
+ function pintar(usuario,clave){
+  aviso.hidden=true;
+  var c=document.createElement("div");c.className="cred";c.setAttribute("role","status");
+  var h=document.createElement("h3");h.textContent="¡Felicidades! Hoy empiezas un nuevo camino 🎉";c.appendChild(h);
+  var m=document.createElement("p");
+  m.textContent="Aprender inglés abre puertas, y cada día que practiques te acerca a tu meta. Tu cuenta ya está lista. Lo importante no es la velocidad, es la constancia. ¡Tú puedes! 💪";
+  c.appendChild(m);
+  [["Usuario",usuario],["Contraseña",clave]].forEach(function(x){
+   var f=document.createElement("div");f.className="fila";
+   var s=document.createElement("span");s.textContent=x[0];
+   var b=document.createElement("b");b.textContent=x[1];
+   f.appendChild(s);f.appendChild(b);c.appendChild(f);
+  });
+  var n=document.createElement("p");
+  n.textContent="Guarda estos datos ahora (toma una captura de pantalla). Los podrás volver a ver en esta página durante 24 horas.";
+  c.appendChild(n);
+  var a=document.createElement("a");a.className="btn amber";a.href="./index.html";a.textContent="Entrar a la app";c.appendChild(a);
+  var txt="¡Felicidades! 🎉 Hoy empiezas un nuevo camino con EVO ENGLISH.\n\n👤 Usuario: "+usuario+"\n🔑 Contraseña: "+clave+"\n\nEntra aquí: "+location.origin+"/index.html\n\nLo importante no es la velocidad, es la constancia. ¡Tú puedes! 🚀";
+  var w=document.createElement("a");w.className="btn ghost";w.style.marginTop="8px";w.target="_blank";w.rel="noopener";
+  w.href="https://wa.me/?text="+encodeURIComponent(txt);w.textContent="Guardar mis datos por WhatsApp";c.appendChild(w);
+  aviso.parentNode.insertBefore(c,aviso);
+ }
+ function esperarCuenta(){
+  if(!sid){msg("¡Gracias! Tu pago se recibió. Si no ves tus datos de acceso, escríbenos por WhatsApp y te los damos.",true);return;}
+  msg("¡Gracias! Estamos creando tu cuenta, un momento…",true);
+  var intentos=0;
+  function fallo(){
+   if(++intentos<20){setTimeout(pedir,2000);return;}
+   msg("Tu pago se recibió, pero tu cuenta tarda en crearse. Escríbenos por WhatsApp y te damos tu acceso.",false);
+  }
+  function pedir(){
+   fetch("/api/credenciales?session_id="+encodeURIComponent(sid)).then(function(r){return r.json();}).then(function(d){
+    if(d&&d.ok){pintar(d.usuario,d.password);return;}
+    if(d&&d.expirado){msg("Tu cuenta ya fue creada con el usuario: "+d.usuario+". Por seguridad la contraseña ya no se muestra; escríbenos por WhatsApp y te ayudamos.",true);return;}
+    fallo();
+   }).catch(fallo);
+  }
+  pedir();
+ }
+ if(p==="ok")esperarCuenta();
  if(p==="cancelado")msg("No se hizo ningún cobro. Cuando quieras, puedes intentarlo de nuevo.",false);
  function suscribir(e){
   e.preventDefault();

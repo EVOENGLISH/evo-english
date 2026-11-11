@@ -214,6 +214,16 @@ var StudentRepository = (function () {
   return { ok: true };
  }
 
+ // Conteos de alumnos nuevos por periodo (hoy, ayer, semana, mes, 2-6
+ // meses, año) + los 8 más recientes, calculados en el servidor con hora de
+ // México. Devuelve null si la nube no responde (el panel lo muestra como
+ // "no disponible", nunca como ceros falsos).
+ async function adminNewStudentsStats(adminPassword) {
+  var r = await rpc("admin_alumnos_nuevos", { p_admin_password: adminPassword });
+  if (!r.ok) return null;
+  return r.data || null;
+ }
+
  async function adminChangePassword(adminPassword, usuario, nuevaPassword) {
   var r = await rpc("admin_cambiar_password", { p_admin_password: adminPassword, p_usuario: usuario, p_nueva_password: nuevaPassword });
   if (!r.ok) { avisar("No se pudo cambiar la contraseña en la nube (" + detalleError(r.error) + ")."); return { ok: false }; }
@@ -311,6 +321,7 @@ var StudentRepository = (function () {
  return {
   login: login,
   adminListStudents: adminListStudents,
+  adminNewStudentsStats: adminNewStudentsStats,
   adminRegisterStudent: adminRegisterStudent,
   adminChangePassword: adminChangePassword,
   adminToggleActive: adminToggleActive,

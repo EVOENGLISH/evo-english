@@ -124,6 +124,10 @@ var LoginOnboarding = (function () {
   });
  }
 
+ async function alumnosNuevos() {
+  return StudentRepository.adminNewStudentsStats(ADMIN_FIJO.password);
+ }
+
  async function registrarAlumno(nombre, usuario, password) {
   nombre = (nombre || "").trim(); var key = normUser(usuario); password = (password || "").trim();
   if (!nombre || !key || !password) return { ok: false, error: "Completa nombre, usuario y contraseña." };
@@ -413,7 +417,7 @@ var LoginOnboarding = (function () {
   init: init,
   cerrarSesion: cerrarSesion,
   usuarioActual: function () { return USUARIO_ACTUAL; },
-  usuarios: { listarAlumnos: listarAlumnos, registrarAlumno: registrarAlumno, cambiarPassword: cambiarPassword, alternarActivo: alternarActivo, eliminarAlumno: eliminarAlumno },
+  usuarios: { listarAlumnos: listarAlumnos, alumnosNuevos: alumnosNuevos, registrarAlumno: registrarAlumno, cambiarPassword: cambiarPassword, alternarActivo: alternarActivo, eliminarAlumno: eliminarAlumno },
   config: { leer: leerConfig, guardar: guardarConfig }
  };
 })();

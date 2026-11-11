@@ -49,6 +49,7 @@ var PanelAdmin = (function () {
    + '<button type="button" class="pa-btn pa-btn-ghost" data-a="pa-logout">' + ic("lock", 16) + ' Cerrar sesión</button>'
    + '</div></header>'
    + '<main class="pa-main">'
+   + seccionNuevos()
    + seccionRegistro()
    + seccionAlumnos()
    + seccionConfig(c)
@@ -56,6 +57,82 @@ var PanelAdmin = (function () {
    + '</div>';
   wireEventos();
   cargarTablaInicial();
+  cargarNuevos();
+ }
+
+ /* ---------------------------------------------------------------------
+  * SECCIÓN — Alumnos nuevos (hoy, ayer, semana, mes, 2-6 meses, año)
+  * Los números los calcula la base de datos (hora de México). "de pago" =
+  * alumnos que se registraron solos pagando su suscripción en la landing.
+  * --------------------------------------------------------------------- */
+ var PERIODOS = [
+  ["hoy", "Hoy"], ["ayer", "Ayer"], ["semana", "Esta semana"], ["mes", "Este mes"],
+  ["m2", "Últimos 2 meses"], ["m3", "Últimos 3 meses"], ["m4", "Últimos 4 meses"],
+  ["m5", "Últimos 5 meses"], ["m6", "Últimos 6 meses"], ["anio", "Este año"]
+ ];
+ function seccionNuevos() {
+  return '<section class="pa-card">'
+   + '<h2>' + ic("users", 20) + ' Alumnos nuevos</h2>'
+   + '<div class="pa-stats" id="pa-stats"><p class="pa-hint">Cargando…</p></div>'
+   + '<p class="pa-hint" id="pa-stats-nota" hidden></p>'
+   + '<div class="pa-recientes" id="pa-recientes" hidden></div>'
+   + '</section>';
+ }
+ function fechaCorta(iso) {
+  try {
+   return new Date(iso).toLocaleString("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  } catch (_) { return ""; }
+ }
+ function pintarNuevos(datos) {
+  var cont = document.getElementById("pa-stats");
+  if (!cont) return; // el panel pudo cerrarse mientras llegaba la respuesta
+  var nota = document.getElementById("pa-stats-nota"), rec = document.getElementById("pa-recientes");
+  if (!datos || !datos.conteos) {
+   cont.innerHTML = '<p class="pa-hint">No se pudieron cargar las estadísticas (sin conexión con la nube).</p>';
+   return;
+  }
+  var c = datos.conteos;
+  cont.innerHTML = PERIODOS.map(function (p) {
+   var x = c[p[0]] || { n: 0, pago: 0 };
+   return '<div class="pa-stat"><span>' + p[1] + '</span><b>' + x.n + '</b>'
+    + '<small>' + (x.pago ? x.pago + ' de pago' : '&nbsp;') + '</small></div>';
+  }).join("");
+  if (c.sin_fecha > 0) {
+   nota.textContent = c.sin_fecha + " de tus " + c.total + " alumnos son anteriores a este contador y no tienen fecha de alta, así que no entran en estas cifras. Los nuevos se cuentan solos.";
+   nota.hidden = false;
+  } else { nota.hidden = true; }
+  var lista = datos.recientes || [];
+  if (lista.length) {
+   rec.innerHTML = '<h3>Últimos registros</h3>' + lista.map(function (a) {
+    return '<div class="pa-rec"><div><b>' + esc(a.nombre) + '</b><small>@' + esc(a.usuario) + ' · ' + esc(fechaCorta(a.creado_en)) + '</small></div>'
+     + '<span class="pa-tag ' + (a.origen === 'stripe' ? '' : 'manual') + '">' + (a.origen === 'stripe' ? 'Pagó en línea' : 'Registro manual') + '</span></div>';
+   }).join("");
+   rec.hidden = false;
+  } else { rec.hidden = true; }
+ }
+ async function cargarNuevos() {
+  pintarNuevos(await LoginOnboarding.usuarios.alumnosNuevos());
+ }
+
+ /* ---------------------------------------------------------------------
+  * WhatsApp: mensaje de bienvenida listo para mandar con un clic
+  * --------------------------------------------------------------------- */
+ function normTel(t) {
+  var d = String(t || "").replace(/\D/g, "");
+  if (d.length === 10) return "52" + d;
+  if (d.length === 13 && d.indexOf("521") === 0) return "52" + d.slice(3);
+  return d;
+ }
+ function mensajeBienvenida(nombre, usuario, password) {
+  var primero = String(nombre || "").trim().split(/\s+/)[0] || "";
+  return "¡Felicidades" + (primero ? ", " + primero : "") + "! 🎉\n\n"
+   + "Hoy empiezas un nuevo camino: aprender inglés abre puertas, y cada día que practiques te acerca a tu meta. "
+   + "¡Estamos muy contentos de tenerte en EVO ENGLISH! 💪\n\n"
+   + "Estos son tus datos para entrar y empezar a aprender ya:\n"
+   + "👤 Usuario: " + usuario + "\n"
+   + "🔑 Contraseña: " + password + "\n\n"
+   + "Entra aquí: " + location.origin + "/\n\n"
+   + "Recuerda: lo importante no es la velocidad, es la constancia. ¡Tú puedes! 🚀";
  }
 
  /* ---------------------------------------------------------------------
@@ -68,10 +145,13 @@ var PanelAdmin = (function () {
    + '<input class="pa-input" id="pa-nombre" placeholder="Nombre completo" required>'
    + '<input class="pa-input" id="pa-usuario" placeholder="Usuario" required autocomplete="off">'
    + '<input class="pa-input" id="pa-password" placeholder="Contraseña" required autocomplete="off">'
+   + '<input class="pa-input" id="pa-tel" placeholder="WhatsApp (opcional)" inputmode="tel" autocomplete="off">'
    + '<button type="submit" class="pa-btn pa-btn-primary">' + ic("check", 16) + ' Registrar alumno</button>'
    + '</form>'
    + '<p class="pa-err" id="pa-alta-err" hidden></p>'
    + '<p class="pa-ok" id="pa-alta-ok" hidden></p>'
+   + '<a class="pa-btn pa-btn-ghost pa-wa-link" id="pa-wa" target="_blank" rel="noopener" hidden>Enviar bienvenida por WhatsApp</a>'
+   + '<p class="pa-hint">Si escribes su WhatsApp, al registrarlo te aparece un botón que abre el mensaje de bienvenida con su usuario y contraseña, listo para enviar.</p>'
    + '</section>';
  }
 
@@ -197,6 +277,9 @@ var PanelAdmin = (function () {
    var nombre = document.getElementById("pa-nombre").value;
    var usuario = document.getElementById("pa-usuario").value;
    var password = document.getElementById("pa-password").value;
+   var telefono = normTel(document.getElementById("pa-tel").value);
+   var waEl = document.getElementById("pa-wa");
+   waEl.hidden = true;
    var claveUsuario = (usuario || "").trim().toLowerCase();
    var errEl = document.getElementById("pa-alta-err"), okEl = document.getElementById("pa-alta-ok");
    var btn = document.querySelector("#pa-form-alta button[type=submit]");
@@ -234,7 +317,12 @@ var PanelAdmin = (function () {
     return;
    }
    okEl.textContent = "¡Alumno \"" + nombre + "\" registrado con éxito en la nube! Ya puede iniciar sesión con su usuario y contraseña."; okEl.hidden = false;
+   if (telefono.length >= 11) {
+    waEl.href = "https://wa.me/" + telefono + "?text=" + encodeURIComponent(mensajeBienvenida(nombre, usuario.trim().toLowerCase(), password.trim()));
+    waEl.hidden = false;
+   }
    document.getElementById("pa-form-alta").reset();
+   cargarNuevos();
   });
 
   document.getElementById("pa-form-config").addEventListener("submit", function (ev) {
