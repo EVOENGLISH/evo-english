@@ -145,35 +145,33 @@
   mostrarEscribiendo(true);
 
   var contexto = estado.historial.slice(-MAX_TURNOS);
-  try {
-   var r = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-     systemInstruction: { parts: [{ text: SISTEMA }] },
-     contents: contexto,
-     generationConfig: { maxOutputTokens: 800, temperature: 0.7 }
-    })
-   });
-   var data = await r.json().catch(function () { return {}; });
-   mostrarEscribiendo(false);
-   var resp = r.ok ? textoDeRespuesta(data) : "";
-   if (resp) {
-    burbuja(resp, "bot");
-    estado.historial.push({ role: "model", parts: [{ text: resp }] });
-   } else {
-    estado.historial.pop(); // no dejar el mensaje sin respuesta en el contexto
-    var msg = r.status === 429 ? "LEVO tiene muchos mensajes ahora. Espera un momento e intenta otra vez."
-     : r.status === 500 || r.status === 403 ? "LEVO no está disponible por ahora. Avísale a tu maestro."
-     : "LEVO no pudo responder. Intenta de nuevo.";
-    // Detalle técnico corto (código + mensaje) para poder diagnosticar.
-    var det = (data && data.error && data.error.message) ? String(data.error.message).slice(0, 140) : (r.ok ? "respuesta vacía" : "");
-    burbuja(msg + "\n[" + r.status + (det ? " · " + det : "") + "]", "err");
-   }
-  } catch (e) {
-   mostrarEscribiendo(false);
+  var cuerpo = JSON.stringify({
+   systemInstruction: { parts: [{ text: SISTEMA }] },
+   contents: contexto,
+   generationConfig: { maxOutputTokens: 800, temperature: 0.7 }
+  });
+  var resp = "", ultimo = 0;
+  // Hasta 3 intentos automáticos y silenciosos: el alumno solo ve los puntitos.
+  for (var i = 0; i < 3 && !resp; i++) {
+   try {
+    var r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: cuerpo });
+    ultimo = r.status;
+    var data = await r.json().catch(function () { return {}; });
+    resp = r.ok ? textoDeRespuesta(data) : "";
+    if (!resp && (r.status === 400 || r.status === 403 || r.status === 429)) break;
+   } catch (e) { ultimo = 0; }
+   if (!resp && i < 2) await new Promise(function (ok) { setTimeout(ok, 1200 * (i + 1)); });
+  }
+  mostrarEscribiendo(false);
+  if (resp) {
+   burbuja(resp, "bot");
+   estado.historial.push({ role: "model", parts: [{ text: resp }] });
+  } else {
    estado.historial.pop();
-   burbuja("Sin conexión con LEVO. Revisa tu internet e intenta de nuevo.", "err");
+   try { console.warn("LEVO error", ultimo); } catch (e) {}
+   burbuja(ultimo === 429 ? "LEVO está atendiendo a muchos alumnos. Espera un momentito y vuelve a escribir."
+    : ultimo === 0 ? "Sin conexión con LEVO. Revisa tu internet e intenta de nuevo."
+    : "LEVO se está tomando un descanso corto. Vuelve a enviar tu mensaje en unos segundos.", "err");
   }
   estado.enviando = false; els.send.disabled = false;
   els.input.focus();
