@@ -21,8 +21,36 @@
    vive solo en Vercel (Project Settings → Environment Variables →
    GEMINI_API_KEY). Así GitHub y los alumnos no pueden verla. */
 var GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-var GEMINI_MODEL = "gemini-2.5-flash";
+/* Modelo: se puede cambiar sin tocar código con la variable GEMINI_MODEL en Vercel. */
+var GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 var GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent";
+
+
+/* Solo estos campos pasan a Gemini; todo lo demás se descarta. */
+function limpiarCuerpo(b) {
+ if (!b || typeof b !== "object" || !Array.isArray(b.contents)) return null;
+ var contents = b.contents.slice(-12).map(function (c) {
+  var role = c && c.role === "model" ? "model" : "user";
+  var txt = c && c.parts && c.parts[0] && typeof c.parts[0].text === "string" ? c.parts[0].text.slice(0, 600) : "";
+  return { role: role, parts: [{ text: txt }] };
+ }).filter(function (c) { return c.parts[0].text; });
+ if (!contents.length) return null;
+ var out = { contents: contents, generationConfig: { maxOutputTokens: 800, temperature: 0.7 } };
+ var si = b.systemInstruction && b.systemInstruction.parts && b.systemInstruction.parts[0] && b.systemInstruction.parts[0].text;
+ if (typeof si === "string" && si) out.systemInstruction = { parts: [{ text: si.slice(0, 2500) }] };
+ return out;
+}
+
+/* Límite simple por IP: 20 mensajes por minuto (se reinicia si el servidor se reinicia). */
+var _visitas = {};
+function excedeLimite(req) {
+ var ip = ((req.headers["x-forwarded-for"] || "") + "").split(",")[0].trim() || "x";
+ var ahora = Date.now();
+ var lista = (_visitas[ip] || []).filter(function (t) { return ahora - t < 60000; });
+ lista.push(ahora);
+ _visitas[ip] = lista;
+ return lista.length > 20;
+}
 
 module.exports = async function handler(req, res) {
  if (req.method !== "POST") {
@@ -41,6 +69,18 @@ module.exports = async function handler(req, res) {
      (algunos runtimes lo dejan crudo), se intenta parsear aquí. */
   if (typeof body === "string") {
    try { body = JSON.parse(body); } catch (_) { body = {}; }
+  }
+
+  /* Protección: solo se aceptan los campos que usa el chat, con límites,
+     para que nadie pueda usar este servidor como una llave de Gemini gratis. */
+  body = limpiarCuerpo(body);
+  if (!body) {
+   res.status(400).json({ error: { message: "Solicitud no válida." } });
+   return;
+  }
+  if (excedeLimite(req)) {
+   res.status(429).json({ error: { message: "Demasiados mensajes. Espera un momento." } });
+   return;
   }
 
   var upstream = await fetch(GEMINI_URL + "?key=" + encodeURIComponent(GEMINI_API_KEY), {
