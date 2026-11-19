@@ -41,7 +41,7 @@ async function llamarClaude(body, signal) {
  });
  while (msgs.length && msgs[0].role !== "user") msgs.shift();
  if (!msgs.length) return { status: 400, data: {} };
- var payload = { model: CLAUDE_MODEL, max_tokens: 400, temperature: 0.7, messages: msgs };
+ var payload = { model: CLAUDE_MODEL, max_tokens: 700, temperature: 0.7, messages: msgs };
  if (body.systemInstruction) payload.system = body.systemInstruction.parts[0].text;
  var r = await fetch("https://api.anthropic.com/v1/messages", {
   method: "POST",
@@ -69,7 +69,28 @@ async function llamarGroq(body, modelo, signal) {
  var r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
   method: "POST",
   headers: { "Content-Type": "application/json", "Authorization": "Bearer " + GROQ_API_KEY },
-  body: JSON.stringify({ model: modelo, messages: msgs, max_tokens: 400, temperature: 0.7 }),
+  body: JSON.stringify({ model: modelo, messages: msgs, max_tokens: 700, temperature: 0.7 }),
+  signal: signal
+ });
+ var d = await r.json().catch(function () { return {}; });
+ var t = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+ if (r.ok && t) return { status: 200, data: { candidates: [{ content: { parts: [{ text: String(t).trim() }] } }] } };
+ return { status: r.ok ? 502 : r.status, data: d };
+}
+/* ---- OpenRouter (gratis con modelos ":free"): respaldo extra, formato OpenAI ---- */
+var OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+var OPENROUTER_MODELO = process.env.OPENROUTER_MODEL || "openrouter/free";
+
+async function llamarOpenRouter(body, signal) {
+ var msgs = [];
+ if (body.systemInstruction) msgs.push({ role: "system", content: body.systemInstruction.parts[0].text });
+ body.contents.forEach(function (c) {
+  msgs.push({ role: c.role === "model" ? "assistant" : "user", content: c.parts[0].text });
+ });
+ var r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "Authorization": "Bearer " + OPENROUTER_API_KEY, "X-Title": "EVO ENGLISH" },
+  body: JSON.stringify({ model: OPENROUTER_MODELO, messages: msgs, max_tokens: 700, temperature: 0.7 }),
   signal: signal
  });
  var d = await r.json().catch(function () { return {}; });
@@ -111,7 +132,7 @@ module.exports = async function handler(req, res) {
   res.status(405).json({ error: { message: "Method not allowed" } });
   return;
  }
- if (!GEMINI_API_KEY && !ANTHROPIC_API_KEY && !GROQ_API_KEY) {
+ if (!GEMINI_API_KEY && !ANTHROPIC_API_KEY && !GROQ_API_KEY && !OPENROUTER_API_KEY) {
   res.status(500).json({ error: { message: "El servidor no tiene configurada ninguna llave de IA." } });
   return;
  }
@@ -168,6 +189,20 @@ module.exports = async function handler(req, res) {
     } catch (e) { /* siguiente */ }
     finally { clearTimeout(t2); }
     if (Date.now() - t0 > 15000) break;
+    await esperar(400);
+   }
+  }
+  /* 1c) OpenRouter (gratis): 2 intentos */
+  if (OPENROUTER_API_KEY) {
+   for (var o = 0; o < 2; o++) {
+    var c3 = new AbortController();
+    var t3 = setTimeout(function () { c3.abort(); }, 9000);
+    try {
+     var ro = await llamarOpenRouter(body, c3.signal);
+     if (ro.status === 200) { res.status(200).json(ro.data); return; }
+     if ([429, 500, 502, 503].indexOf(ro.status) === -1) break;
+    } catch (e) { /* siguiente */ }
+    finally { clearTimeout(t3); }
     await esperar(400);
    }
   }
