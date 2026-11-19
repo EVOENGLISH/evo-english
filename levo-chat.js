@@ -152,7 +152,7 @@
     body: JSON.stringify({
      systemInstruction: { parts: [{ text: SISTEMA }] },
      contents: contexto,
-     generationConfig: { maxOutputTokens: 400, temperature: 0.7, thinkingConfig: { thinkingBudget: 0 } }
+     generationConfig: { maxOutputTokens: 800, temperature: 0.7 }
     })
    });
    var data = await r.json().catch(function () { return {}; });
