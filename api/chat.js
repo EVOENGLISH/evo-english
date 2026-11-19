@@ -23,7 +23,10 @@
 var GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 /* Modelo: se puede cambiar sin tocar código con la variable GEMINI_MODEL en Vercel. */
 var GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-var GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent";
+/* Modelos de respaldo: si el principal está saturado (503) se prueba el siguiente. */
+var MODELOS = [GEMINI_MODEL, "gemini-3.6-flash", "gemini-3.8-flash"].filter(function (m, i, a) { return a.indexOf(m) === i; });
+function urlModelo(m) { return "https://generativelanguage.googleapis.com/v1beta/models/" + m + ":generateContent"; }
+function esperar(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
 
 /* Solo estos campos pasan a Gemini; todo lo demás se descarta. */
@@ -83,16 +86,26 @@ module.exports = async function handler(req, res) {
    return;
   }
 
-  var upstream = await fetch(GEMINI_URL + "?key=" + encodeURIComponent(GEMINI_API_KEY), {
-   method: "POST",
-   headers: { "Content-Type": "application/json" },
-   body: JSON.stringify(body || {})
-  });
-
-  var data = await upstream.json().catch(function () { return {}; });
-  /* Se reenvía el mismo código HTTP que dio Gemini (200, 400, 403, 429, etc.)
-     para que el frontend pueda mostrar el error exacto tal como lo pide
-     el diagnóstico ya implementado en geminiChat(). */
+  /* Reintentos con respaldo: hasta 4 intentos (~8 s máx.), alternando modelos
+     cuando Gemini responde saturado (503), límite (429) o error interno (500). */
+  var upstream = null, data = {};
+  var t0 = Date.now();
+  for (var i = 0; i < 4; i++) {
+   var modelo = MODELOS[i % MODELOS.length];
+   try {
+    upstream = await fetch(urlModelo(modelo) + "?key=" + encodeURIComponent(GEMINI_API_KEY), {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify(body || {})
+    });
+    data = await upstream.json().catch(function () { return {}; });
+   } catch (e) { upstream = null; }
+   if (upstream && upstream.ok) break;
+   if (upstream && [429, 500, 503].indexOf(upstream.status) === -1 && !(upstream.status === 404 && i < MODELOS.length)) break;
+   if (Date.now() - t0 > 6500) break;
+   await esperar(500 * (i + 1));
+  }
+  if (!upstream) { res.status(502).json({ error: { message: "Sin respuesta de Gemini." } }); return; }
   res.status(upstream.status).json(data);
  } catch (err) {
   res.status(502).json({ error: { message: "No se pudo contactar a Gemini desde el servidor: " + (err && err.message ? err.message : String(err)) } });
