@@ -16,7 +16,7 @@
  var MAX_DIA = 150;        // mensajes por día por dispositivo (límite suave)
 
  var PERSONAJES = [
-  { id: "levo", nombre: "LEVO", rol: "Lobo tutor", disponible: true,
+  { id: "levo", nombre: "LEVO", rol: "Lobo tutor", disponible: true, jaw: true,
     poses: { idle: "assets/mascot/evo_welcome.png", think: "assets/mascot/evo_thinking.png", talk: "assets/mascot/evo_wolf_mentor.png", happy: "assets/mascot/evo_success.png" } },
   { id: "leva", nombre: "LEVA", rol: "Loba tutora", disponible: false, poses: null }
  ];
@@ -123,6 +123,11 @@
    ".cv-wolf{position:absolute;left:50%;bottom:0;height:88%;aspect-ratio:1/1.1;transform:translateX(-50%);transform-origin:50% 100%;animation:cv-breath 4.2s ease-in-out infinite}",
    ".cv-w{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:50% 100%;opacity:0;transition:opacity .35s;filter:drop-shadow(0 8px 14px rgba(0,0,0,.45))}",
    ".cv-w.on{opacity:1}",
+   ".cv-jaw,.cv-mouth{position:absolute;pointer-events:none;opacity:0;transition:opacity .2s}",
+   ".cv-jaw{inset:0;transform:translateY(calc(var(--d,0)*1%));-webkit-mask-image:radial-gradient(ellipse 7.2% 3.4% at 51.1% 38%,#000 60%,transparent 100%);mask-image:radial-gradient(ellipse 7.2% 3.4% at 51.1% 38%,#000 60%,transparent 100%)}",
+   ".cv-jaw img{width:100%;height:100%;object-fit:contain;object-position:50% 100%}",
+   ".cv-mouth{left:51.1%;top:35%;width:7.4%;height:calc(var(--d,0)*1% + .25%);transform:translateX(-50%);border-radius:0 0 50% 50%/0 0 100% 100%;background:linear-gradient(#1A0407 0,#3A0A14 55%,#8E3345 85%,#B04A5C 100%)}",
+   ".cv-stage[data-lip=on] .cv-jaw,.cv-stage[data-lip=on] .cv-mouth{opacity:1}",
    "@keyframes cv-breath{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.025)}}",
    ".cv-stage[data-estado=talk] .cv-wolf{animation:cv-talk .5s ease-in-out infinite alternate}",
    "@keyframes cv-talk{from{transform:translateX(-50%) translateY(0) scale(1)}to{transform:translateX(-50%) translateY(-5px) scale(1.04)}}",
@@ -254,7 +259,7 @@
    + '<div class="cv-fx" aria-hidden="true">' + lucis + hojas + '</div>'
    + '<div class="cv-glow" aria-hidden="true"></div>'
    + '<div class="cv-rings" aria-hidden="true"><i></i><i></i><i></i></div>'
-   + '<div class="cv-wolf" aria-hidden="true"><img class="cv-w on" id="cv-wa" src="' + w + '" alt=""><img class="cv-w" id="cv-wb" src="' + w + '" alt=""></div>'
+   + '<div class="cv-wolf" aria-hidden="true"><img class="cv-w on" id="cv-wa" src="' + w + '" alt=""><img class="cv-w" id="cv-wb" src="' + w + '" alt="">' + (p.jaw ? '<i class="cv-mouth" id="cv-mouth"></i><div class="cv-jaw" id="cv-jaw"><img src="' + w + '" alt=""></div>' : '') + '</div>'
    + '<div class="cv-bar">'
    + '<button type="button" class="cv-btn" data-cv="salir" aria-label="Salir de la conversación">' + IC.back + '</button>'
    + '<div class="cv-who"><b>' + esc(p.nombre) + '</b><small id="cv-sub">' + (S.tema ? esc(S.tema.n) : "Habla de lo que quieras") + '</small></div>'
@@ -306,7 +311,7 @@
   if (els.stage) els.stage.setAttribute("data-estado", estado);
   if (els.state) els.state.textContent = ETIQ[estado] || "En línea";
   if (!p.poses || !els.wa) return;
-  var img = p.poses[estado === "talk" || estado === "listen" ? (estado === "talk" ? "talk" : "idle") : estado === "think" ? "think" : estado === "happy" ? "happy" : "idle"];
+  var img = p.poses[estado === "think" ? "think" : estado === "happy" ? "happy" : (estado === "talk" && !p.jaw) ? "talk" : "idle"];
   var on = els.wa.classList.contains("on") ? els.wa : els.wb, off = on === els.wa ? els.wb : els.wa;
   if (on.getAttribute("src") === img) return;
   off.src = img; off.classList.add("on"); on.classList.remove("on");
@@ -360,13 +365,77 @@
   if (si && els.msgs) { var d = document.createElement("div"); d.className = "cv-dots"; d.innerHTML = "<i></i><i></i><i></i>"; els.msgs.appendChild(d); els.msgs.scrollTop = els.msgs.scrollHeight; }
  }
 
+ /* ---------- labios sincronizados con la voz ---------- */
+ var LIP = { raf: 0, an: null, buf: null, sim: false, t0: 0, d: 0, idleT: 0, ctx: null };
+ function lipCtx() {
+  try {
+   if (!LIP.ctx) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) LIP.ctx = new AC(); }
+   if (LIP.ctx && LIP.ctx.state === "suspended") LIP.ctx.resume();
+  } catch (e) {}
+ }
+ function lipFrame() {
+  var jaw = document.getElementById("cv-jaw"), mo = document.getElementById("cv-mouth"), st = els.stage;
+  if (!jaw || !st) { LIP.raf = 0; return; }
+  var target = 0, t = performance.now() - LIP.t0;
+  if (LIP.an) {
+   LIP.an.getByteTimeDomainData(LIP.buf);
+   var sum = 0; for (var i = 0; i < LIP.buf.length; i++) { var v = (LIP.buf[i] - 128) / 128; sum += v * v; }
+   target = Math.min(2.1, Math.sqrt(sum / LIP.buf.length) * 11);
+  } else if (LIP.sim) {
+   // sin audio medible: ritmo de sílabas simulado
+   target = Math.max(0, 0.4 + 1.1 * Math.abs(Math.sin(t / 95)) * (0.6 + 0.4 * Math.sin(t / 430)) + 0.2 * Math.sin(t / 37));
+  }
+  LIP.d += (target - LIP.d) * (target > LIP.d ? 0.55 : 0.3);
+  var d = LIP.d < 0.04 ? 0 : LIP.d;
+  jaw.style.setProperty("--d", d.toFixed(3)); if (mo) mo.style.setProperty("--d", d.toFixed(3));
+  LIP.raf = requestAnimationFrame(lipFrame);
+ }
+ function lipStart(audio) {
+  var p = pj(); if (!p.jaw || !els.stage) return;
+  clearTimeout(LIP.idleT);
+  LIP.an = null; LIP.sim = true; LIP.t0 = performance.now();
+  try {
+   if (audio && LIP.ctx && LIP.ctx.state === "running") {
+    var src = LIP.ctx.createMediaElementSource(audio), an = LIP.ctx.createAnalyser();
+    an.fftSize = 512; src.connect(an); an.connect(LIP.ctx.destination);
+    LIP.an = an; LIP.buf = new Uint8Array(an.fftSize); LIP.sim = false;
+   }
+  } catch (e) { LIP.an = null; LIP.sim = true; }
+  els.stage.setAttribute("data-lip", "on"); pose("talk");
+  if (!LIP.raf) LIP.raf = requestAnimationFrame(lipFrame);
+ }
+ function lipStop() {
+  clearTimeout(LIP.idleT);
+  LIP.idleT = setTimeout(function () {
+   LIP.sim = false; LIP.an = null; LIP.d = 0;
+   if (LIP.raf) { cancelAnimationFrame(LIP.raf); LIP.raf = 0; }
+   if (els.stage) els.stage.removeAttribute("data-lip");
+   var jaw = document.getElementById("cv-jaw"), mo = document.getElementById("cv-mouth");
+   if (jaw) jaw.style.setProperty("--d", "0"); if (mo) mo.style.setProperty("--d", "0");
+   if (S.estado === "talk") pose("idle");
+  }, 380);
+ }
+ // playAudioUrl (index.html) avisa aquí cada vez que empieza un audio de voz.
+ window.__evoLip = function (au) {
+  if (!els.stage || !document.getElementById("cv-chat")) return;
+  var on = function () { lipStart(au); };
+  au.addEventListener("playing", on, { once: true });
+  ["ended", "pause", "error"].forEach(function (ev) { au.addEventListener(ev, lipStop, { once: true }); });
+ };
+
  function hablar(texto) {
   var clean = String(texto).replace(/\([^)]*\)/g, "").trim();   // sin la ayuda entre paréntesis
   if (!clean) return;
+  lipCtx();
+  var navegador = true;
+  try { navegador = !(typeof window.ttsProvider === "function" && window.ttsProvider() !== "browser"); } catch (e) {}
   try { if (typeof window.say === "function") window.say(clean); else if (window.speechSynthesis) { window.speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(clean); u.lang = "en-US"; u.rate = 0.92; window.speechSynthesis.speak(u); } } catch (e) {}
-  // La pose "hablando" dura aproximadamente lo que dura la frase.
-  pose("talk"); caption(texto); clearTimeout(S.talkTimer);
-  S.talkTimer = setTimeout(function () { pose("idle"); }, Math.max(1500, clean.split(/\s+/).length * 420));
+  caption(texto); clearTimeout(S.talkTimer);
+  if (navegador) {
+   // voz del navegador: no hay audio que medir, se mueve la boca durante lo que dura la frase
+   lipStart(null);
+   S.talkTimer = setTimeout(lipStop, Math.max(1500, clean.split(/\s+/).length * 420));
+  }
  }
 
  async function traducir(m, el, btn) {
@@ -473,6 +542,7 @@ function micToggle() {
  document.addEventListener("click", function (e) {
   var x = e.target.closest && e.target.closest("[data-cv]");
   if (!x) return;
+  lipCtx();
   var a = x.dataset.cv;
   if (a === "pers") { var c = PERSONAJES.filter(function (q) { return q.id === x.dataset.id; })[0]; if (c && c.disponible) { S.char = c.id; if (typeof window.go === "function") window.go(); else window.dispatchEvent(new Event("hashchange")); } }
   else if (a === "start") empezar(x.dataset.tema || "");

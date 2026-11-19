@@ -2760,7 +2760,7 @@ async function fetchTTSAudio(text){var key=ttsProvider()+":"+text;if(TTS_CACHE[k
  }
  if(url)TTS_CACHE[key]=url;
  return url}
-function playAudioUrl(url,rate){return new Promise(function(res){try{var au=new Audio(url);window.__sayAu=au;au.playbackRate=rate||1;au.onended=res;au.onerror=res;au.play().catch(res)}catch(_){res()}})}
+function playAudioUrl(url,rate){return new Promise(function(res){try{var au=new Audio(url);window.__sayAu=au;try{window.__evoLip&&window.__evoLip(au)}catch(_){};au.playbackRate=rate||1;au.onended=res;au.onerror=res;au.play().catch(res)}catch(_){res()}})}
 var BEST_VOICE=null;
 function pickBestVoice(){var vs=(window.speechSynthesis&&speechSynthesis.getVoices())||[];if(!vs.length)return null;
  var enUS=vs.filter(function(v){return /^en[-_]US/i.test(v.lang)}),enAny=vs.filter(function(v){return /^en/i.test(v.lang)});
