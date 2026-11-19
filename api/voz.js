@@ -52,6 +52,7 @@ async function elevenlabs(texto) {
   return { buf: Buffer.from(await r.arrayBuffer()), tipo: "audio/mpeg" };
 }
 
+let ruta = ""; // recuerda cuál endpoint de Gemini funcionó
 async function gemini(texto) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
@@ -59,12 +60,12 @@ async function gemini(texto) {
   const modelos = [process.env.GEMINI_TTS_MODEL, "gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview"].filter(Boolean);
   for (const m of modelos) {
     // 1) endpoint clasico generateContent
-    try {
+    if (ruta !== "int") try {
       const r = await conTiempo("https://generativelanguage.googleapis.com/v1beta/models/" + m + ":generateContent", {
         method: "POST",
         headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: "Say clearly and warmly, like a friendly English teacher: " + texto }] }],
+          contents: [{ parts: [{ text: texto }] }],
           generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voz } } } },
         }),
       }, 9000);
@@ -72,13 +73,14 @@ async function gemini(texto) {
         const a = buscarAudio(await r.json());
         if (a) {
           const buf = Buffer.from(a.b64, "base64");
+          ruta = "gen";
           if (buf.slice(0, 4).toString() === "RIFF") return { buf, tipo: "audio/wav" };
           return { buf: wav(buf, 24000), tipo: "audio/wav" };
         }
       }
     } catch (e) {}
     // 2) endpoint interactions
-    try {
+    if (ruta !== "gen") try {
       const r = await conTiempo("https://generativelanguage.googleapis.com/v1beta/interactions", {
         method: "POST",
         headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
@@ -93,6 +95,7 @@ async function gemini(texto) {
         const a = buscarAudio(await r.json());
         if (a) {
           const buf = Buffer.from(a.b64, "base64");
+          ruta = "int";
           if (buf.slice(0, 4).toString() === "RIFF") return { buf, tipo: "audio/wav" };
           return { buf: wav(buf, 24000), tipo: "audio/wav" };
         }
