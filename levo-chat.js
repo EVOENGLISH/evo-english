@@ -153,6 +153,7 @@
 
  function hablar(texto) {
   try {
+   if (typeof window.say === "function") { window.say(texto, 0.95); return; }
    if (!window.speechSynthesis) return;
    window.speechSynthesis.cancel();
    var u = new SpeechSynthesisUtterance(texto);
