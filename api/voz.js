@@ -53,11 +53,13 @@ async function elevenlabs(texto) {
 }
 
 let ruta = ""; // recuerda cuál endpoint de Gemini funcionó
+let modeloOk = ""; // y cuál modelo
 async function gemini(texto) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
   const voz = process.env.GEMINI_VOICE || "Kore";
   const modelos = [process.env.GEMINI_TTS_MODEL, "gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview"].filter(Boolean);
+  if (modeloOk) modelos.unshift(modeloOk);
   for (const m of modelos) {
     // 1) endpoint clasico generateContent
     if (ruta !== "int") try {
@@ -73,7 +75,7 @@ async function gemini(texto) {
         const a = buscarAudio(await r.json());
         if (a) {
           const buf = Buffer.from(a.b64, "base64");
-          ruta = "gen";
+          ruta = "gen"; modeloOk = m;
           if (buf.slice(0, 4).toString() === "RIFF") return { buf, tipo: "audio/wav" };
           return { buf: wav(buf, 24000), tipo: "audio/wav" };
         }
@@ -95,7 +97,7 @@ async function gemini(texto) {
         const a = buscarAudio(await r.json());
         if (a) {
           const buf = Buffer.from(a.b64, "base64");
-          ruta = "int";
+          ruta = "int"; modeloOk = m;
           if (buf.slice(0, 4).toString() === "RIFF") return { buf, tipo: "audio/wav" };
           return { buf: wav(buf, 24000), tipo: "audio/wav" };
         }
@@ -128,10 +130,11 @@ module.exports = async function handler(req, res) {
   } catch (e) {}
   if (!texto) return res.status(400).json({ error: "vacio" });
   let r = cache.get(texto);
+  const t0 = Date.now();
   if (!r) {
     for (const f of [elevenlabs, gemini, groq]) {
       try { r = await f(texto); } catch (e) { r = null; }
-      if (r) break;
+      if (r) { r.prov = f.name; break; }
     }
     if (r) {
       if (cache.size > 200) cache.delete(cache.keys().next().value);
@@ -140,6 +143,8 @@ module.exports = async function handler(req, res) {
   }
   if (!r) return res.status(503).json({ error: "sin_voz" });
   res.setHeader("Content-Type", r.tipo);
+  res.setHeader("X-Voz", (r.prov || "cache") + ";" + (Date.now() - t0) + "ms");
+  res.setHeader("Access-Control-Expose-Headers", "X-Voz");
   res.setHeader("Cache-Control", "public, max-age=86400");
   return res.status(200).send(r.buf);
 };
