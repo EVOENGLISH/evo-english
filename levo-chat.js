@@ -166,7 +166,9 @@
     var msg = r.status === 429 ? "LEVO tiene muchos mensajes ahora. Espera un momento e intenta otra vez."
      : r.status === 500 || r.status === 403 ? "LEVO no está disponible por ahora. Avísale a tu maestro."
      : "LEVO no pudo responder. Intenta de nuevo.";
-    burbuja(msg, "err");
+    // Detalle técnico corto (código + mensaje) para poder diagnosticar.
+    var det = (data && data.error && data.error.message) ? String(data.error.message).slice(0, 140) : (r.ok ? "respuesta vacía" : "");
+    burbuja(msg + "\n[" + r.status + (det ? " · " + det : "") + "]", "err");
    }
   } catch (e) {
    mostrarEscribiendo(false);
