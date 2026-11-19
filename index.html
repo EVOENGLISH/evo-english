@@ -2773,11 +2773,14 @@ function speakBrowser(text,rate){if(!window.speechSynthesis)return;try{speechSyn
 async function say(t,r){var text=T(t).replace(/[“”]/g,""),rate=r||TTS_RATE;
  try{if(window.__sayAu){window.__sayAu.pause();window.__sayAu=null}}catch(_){}
  if(ttsProvider()!="browser"){
-  var partes=text.length>280?(text.match(/[^.!?]+[.!?]*\s*/g)||[text]).reduce(function(a,s){if(a.length&&(a[a.length-1]+s).length<=280)a[a.length-1]+=s;else a.push(s.slice(0,280));return a},[]):[text];
+  var partes=(text.match(/[^.!?]+[.!?]*\s*/g)||[text]).map(function(x){return x.trim()}).filter(Boolean).reduce(function(a,sn){var l=a.length?a[a.length-1]:null;if(l&&l.length<60&&(l+" "+sn).length<=280)a[a.length-1]=l+" "+sn;else if(sn.length>280){for(var k=0;k<sn.length;k+=280)a.push(sn.slice(k,k+280))}else a.push(sn);return a},[]);
+  if(!partes.length)partes=[text];
   var tok=window.__sayTok=(window.__sayTok||0)+1,ok=false;
+  var pend=partes.map(function(p){return fetchTTSAudio(p)}); // se piden todas a la vez; suena la primera en cuanto llega
   for(var i=0;i<partes.length;i++){
    if(tok!==window.__sayTok)return;
-   var url=await fetchTTSAudio(partes[i]);
+   var url=await pend[i];
+   if(tok!==window.__sayTok)return;
    if(!url){if(!ok)break;return}
    ok=true;await playAudioUrl(url,rate)}
   if(ok)return}

@@ -48,6 +48,7 @@
  function sumarUso() { try { localStorage.setItem(hoyKey(), String(usadosHoy() + 1)); } catch (e) {} }
 
  var IC = {
+  kb: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>',
   mic: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
   send: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
   sound: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>',
@@ -151,6 +152,18 @@
    ".cv-state::before{content:'';display:inline-block;width:8px;height:8px;margin-right:7px;border-radius:50%;background:#34D399;box-shadow:0 0 8px #34D399}",
    ".cv-cap{position:absolute;right:12px;bottom:12px;max-width:min(62%,420px);padding:8px 12px;border-radius:16px;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:#0B2247;font:600 14px/1.35 'DM Sans',sans-serif;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}",
    "@media (max-width:480px){.cv-cap{left:12px;right:12px;max-width:none;bottom:46px;-webkit-line-clamp:2}.cv-state{bottom:12px}.cv-stage{height:clamp(220px,36dvh,320px)}}",
+   ".cv-voice{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 4px 0}",
+   ".cv-kb{width:48px;height:48px;border-radius:14px;border:1px solid #D3DEF2;background:#F4F7FD;color:#3A4F73;display:grid;place-items:center;cursor:pointer;flex:none}",
+   ".cv-big{position:relative;width:84px;height:84px;border-radius:50%;border:0;background:linear-gradient(145deg,#12A85F,#0B7A5A);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 22px rgba(18,168,95,.4)}",
+   ".cv-big svg{width:38px;height:38px}",
+   ".cv-big.rec{background:linear-gradient(145deg,#F0585C,#C93238);box-shadow:0 0 0 0 rgba(229,72,77,.5);animation:cv-ring 1.3s infinite}",
+   "@keyframes cv-ring{0%{box-shadow:0 0 0 0 rgba(229,72,77,.5)}100%{box-shadow:0 0 0 22px rgba(229,72,77,0)}}",
+   ".cv-big:disabled{opacity:.45;cursor:default}",
+   ".cv-spc{width:48px;flex:none}",
+   ".cv-lbl{margin:6px 0 2px;text-align:center;font:700 15px 'DM Sans',sans-serif;color:#0B2247;min-height:22px}",
+   ".cv-live{margin:0 0 8px;padding:10px 14px;border-radius:16px;background:#E8F7EF;border:1px solid #BFE8D2;color:#0B3B2B;font:600 16px/1.35 'DM Sans',sans-serif;max-height:96px;overflow:auto}",
+   ".cv-live:empty{display:none}",
+   "@media (prefers-reduced-motion:reduce){.cv-big.rec{animation:none!important}}",
    "@media (prefers-reduced-motion:reduce){.cv-bg,.cv-glow,.cv-wolf,.cv-rings i,.f,.lf,.cv-dots i,.cv-mic.rec{animation:none!important}.f{opacity:.7}}"
   ].join("\n");
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
@@ -253,11 +266,12 @@
    + '<div class="cv-msgs" id="cv-msgs" aria-live="polite"></div>'
    + '<div class="cv-foot"><div>'
    + '<button type="button" class="cv-sug" id="cv-sug" data-cv="sug" hidden>' + IC.bulb + '<span id="cv-sugt"></span></button>'
-   + '<form class="cv-row" id="cv-form" autocomplete="off">'
+   + '<div class="cv-live" id="cv-live" aria-live="polite"></div>'
+   + (micOk ? '<div class="cv-voice" id="cv-voice"><button type="button" class="cv-kb" data-cv="kb" aria-label="Escribir en vez de hablar">' + IC.kb + '</button><button type="button" class="cv-big" id="cv-mic" data-cv="mic" aria-label="Toca para hablar">' + IC.mic + '</button><span class="cv-spc"></span></div>' : '')
+   + '<p class="cv-lbl" id="cv-note">' + (micOk ? "Toca el micrófono para hablar" : "Tu navegador no permite hablar aquí. Escribe tu mensaje.") + '</p>'
+   + '<form class="cv-row" id="cv-form" autocomplete="off"' + (micOk ? ' hidden' : '') + '>'
    + '<input class="cv-in" id="cv-in" type="text" maxlength="' + MAX_CHARS + '" placeholder="Write in English…" aria-label="Tu mensaje">'
-   + (micOk ? '<button type="button" class="cv-mic" id="cv-mic" data-cv="mic" aria-label="Hablar">' + IC.mic + '</button>' : '')
    + '<button type="submit" class="cv-send" id="cv-send" aria-label="Enviar">' + IC.send + '</button></form>'
-   + '<p class="cv-note" id="cv-note">' + (micOk ? "Toca el micrófono para hablar o escribe tu mensaje." : "Tu navegador no permite hablar aquí. Escribe tu mensaje.") + '</p>'
    + '</div></div></div>';
  }
 
@@ -274,7 +288,7 @@
   if (els.chat.parentNode !== document.body) document.body.appendChild(els.chat);
   els.msgs = document.getElementById("cv-msgs"); els.in = document.getElementById("cv-in");
   els.form = document.getElementById("cv-form"); els.send = document.getElementById("cv-send");
-  els.mic = document.getElementById("cv-mic"); els.note = document.getElementById("cv-note");
+  els.mic = document.getElementById("cv-mic"); els.live = document.getElementById("cv-live"); els.note = document.getElementById("cv-note");
   els.stage = document.getElementById("cv-stage"); els.wa = document.getElementById("cv-wa"); els.wb = document.getElementById("cv-wb");
   els.state = document.getElementById("cv-state"); els.cap = document.getElementById("cv-cap");
   els.sug = document.getElementById("cv-sug"); els.sugt = document.getElementById("cv-sugt");
@@ -398,31 +412,53 @@
     els.in.value = mine.t;
   }
   S.busy = false; els.send.disabled = false; if (els.mic) els.mic.disabled = false;
-  els.in.focus();
+  if (els.form && !els.form.hidden) els.in.focus();
+  else if (els.mic) nota("Toca el micrófono para hablar");
  }
 
- function micToggle() {
+function micToggle() {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR || S.busy) return;
-  if (S.rec) { try { S.rec.stop(); } catch (e) {} return; }
+  if (S.rec) { S.manual = true; try { S.rec.stop(); } catch (e) {} return; }   // 2.º toque: terminar y enviar
   try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
-  var rec = new SR(), final = "";
-  rec.lang = "en-US"; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
-  S.rec = rec; els.mic.classList.add("rec"); nota("Te escucho… habla ahora."); pose("listen");
-  rec.onresult = function (e) {
-   var t = ""; for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
-   els.in.value = t;
-   if (e.results[e.results.length - 1].isFinal) final = t;
-  };
-  rec.onerror = function (e) { nota(e && e.error === "not-allowed" ? "Permite el micrófono en tu navegador para poder hablar." : "No te escuché bien. Intenta de nuevo."); };
-  rec.onend = function () {
-   S.rec = null; if (els.mic) els.mic.classList.remove("rec"); if (S.estado === "listen") pose("idle");
-   if (final.trim()) enviar(final); else if (els.note && /Te escucho/.test(els.note.textContent)) nota("No te escuché. Toca el micrófono e intenta otra vez.");
-  };
-  try { rec.start(); } catch (e) { S.rec = null; els.mic.classList.remove("rec"); nota("No pude abrir el micrófono."); }
+  try { if (window.__sayAu) { window.__sayAu.pause(); window.__sayAu = null; } window.__sayTok = (window.__sayTok || 0) + 1; } catch (e) {}
+  var acumulado = "", t0 = Date.now(), fallos = 0;
+  S.manual = false;
+  function vivo(t) { if (els.live) els.live.textContent = t; if (els.in) els.in.value = t; }
+  function terminar() {
+   S.rec = null; clearTimeout(S.recTimer);
+   if (els.mic) { els.mic.classList.remove("rec"); els.mic.setAttribute("aria-label", "Toca para hablar"); }
+   if (S.estado === "listen") pose("idle");
+   var t = acumulado.trim();
+   if (t) { if (els.live) els.live.textContent = ""; enviar(t); nota(""); }
+   else { if (els.live) els.live.textContent = ""; nota(fallos ? "No te escuché bien. Toca el micrófono e intenta de nuevo." : "No te escuché. Toca el micrófono y habla."); }
+  }
+  function iniciar() {
+   var rec = new SR(), base = acumulado;
+   rec.lang = "en-US"; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
+   S.rec = rec;
+   rec.onresult = function (e) {
+    var t = ""; for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript + " ";
+    acumulado = (base + " " + t).replace(/\s+/g, " ").trim(); vivo(acumulado);
+   };
+   rec.onerror = function (e) {
+    var er = e && e.error;
+    if (er === "not-allowed" || er === "service-not-allowed") { S.manual = true; fallos = 2; nota("Permite el micrófono en tu navegador para poder hablar."); }
+    else if (er !== "no-speech" && er !== "aborted") fallos++;
+   };
+   rec.onend = function () {
+    // El navegador a veces corta solo (silencio): si el alumno no tocó para terminar, seguimos escuchando.
+    if (!S.manual && Date.now() - t0 < 90000 && fallos < 2) { try { iniciar(); return; } catch (e) {} }
+    terminar();
+   };
+   try { rec.start(); } catch (e) { S.rec = null; terminar(); nota("No pude abrir el micrófono."); }
+  }
+  if (els.mic) { els.mic.classList.add("rec"); els.mic.setAttribute("aria-label", "Toca para terminar"); }
+  nota("Te escucho… toca otra vez cuando termines"); pose("listen"); vivo("");
+  iniciar();
  }
 
- function empezar(temaId) {
+  function empezar(temaId) {
   var tema = TEMAS.filter(function (t) { return t.id === temaId; })[0] || null;
   var p = pj(), n = nombreAlumno();
   S.tema = tema; S.hist = []; S.sugerencia = ""; S.busy = false; S.mem = "";
@@ -440,10 +476,11 @@
   var a = x.dataset.cv;
   if (a === "pers") { var c = PERSONAJES.filter(function (q) { return q.id === x.dataset.id; })[0]; if (c && c.disponible) { S.char = c.id; if (typeof window.go === "function") window.go(); else window.dispatchEvent(new Event("hashchange")); } }
   else if (a === "start") empezar(x.dataset.tema || "");
-  else if (a === "salir") { try { if (S.rec) S.rec.stop(); if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (er) {} location.hash = "#/conversar"; }
+  else if (a === "salir") { try { S.manual = true; if (S.rec) S.rec.stop(); if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (er) {} location.hash = "#/conversar"; }
   else if (a === "nueva") { empezar(S.tema ? S.tema.id : ""); }
   else if (a === "voz") { S.hablar = !S.hablar; x.classList.toggle("on", S.hablar); x.setAttribute("aria-pressed", S.hablar); if (!S.hablar) { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (er) {} } }
   else if (a === "mic") micToggle();
+  else if (a === "kb") { if (els.form) { els.form.hidden = !els.form.hidden; if (!els.form.hidden && els.in) els.in.focus(); } }
   else if (a === "sug") { if (S.sugerencia && els.in) { els.in.value = S.sugerencia; hablar(S.sugerencia); els.in.focus(); } }
  });
 
@@ -451,7 +488,7 @@
  window.addEventListener("hashchange", function () {
   if (location.hash !== "#/conversar/chat") {
    var c = document.getElementById("cv-chat"); if (c) c.remove();
-   try { if (S.rec) S.rec.stop(); } catch (e) {}
+   try { S.manual = true; if (S.rec) S.rec.stop(); } catch (e) {}
   }
  });
 
