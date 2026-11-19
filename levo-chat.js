@@ -152,15 +152,19 @@
   });
   var resp = "", ultimo = 0;
   // Hasta 3 intentos automáticos y silenciosos: el alumno solo ve los puntitos.
-  for (var i = 0; i < 3 && !resp; i++) {
+  for (var i = 0; i < 2 && !resp; i++) {
    try {
-    var r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: cuerpo });
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, 28000);
+    var r;
+    try { r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: cuerpo, signal: ctl.signal }); }
+    finally { clearTimeout(timer); }
     ultimo = r.status;
     var data = await r.json().catch(function () { return {}; });
     resp = r.ok ? textoDeRespuesta(data) : "";
     if (!resp && (r.status === 400 || r.status === 403 || r.status === 429)) break;
    } catch (e) { ultimo = 0; }
-   if (!resp && i < 2) await new Promise(function (ok) { setTimeout(ok, 1200 * (i + 1)); });
+   if (!resp && i < 1) await new Promise(function (ok) { setTimeout(ok, 1200 * (i + 1)); });
   }
   mostrarEscribiendo(false);
   if (resp) {
