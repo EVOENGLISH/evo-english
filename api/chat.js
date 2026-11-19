@@ -93,21 +93,30 @@ module.exports = async function handler(req, res) {
   for (var i = 0; i < 4; i++) {
    var modelo = MODELOS[i % MODELOS.length];
    try {
-    upstream = await fetch(urlModelo(modelo) + "?key=" + encodeURIComponent(GEMINI_API_KEY), {
-     method: "POST",
-     headers: { "Content-Type": "application/json" },
-     body: JSON.stringify(body || {})
-    });
-    data = await upstream.json().catch(function () { return {}; });
+    /* Tiempo límite por intento: si Gemini se cuelga, se corta y se prueba otro modelo. */
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, 7000);
+    try {
+     upstream = await fetch(urlModelo(modelo) + "?key=" + encodeURIComponent(GEMINI_API_KEY), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+      signal: ctl.signal
+     });
+     data = await upstream.json().catch(function () { return {}; });
+    } finally { clearTimeout(timer); }
    } catch (e) { upstream = null; }
    if (upstream && upstream.ok) break;
    if (upstream && [429, 500, 503].indexOf(upstream.status) === -1 && !(upstream.status === 404 && i < MODELOS.length)) break;
-   if (Date.now() - t0 > 6500) break;
+   if (Date.now() - t0 > 18000) break;
    await esperar(500 * (i + 1));
   }
-  if (!upstream) { res.status(502).json({ error: { message: "Sin respuesta de Gemini." } }); return; }
+  if (!upstream) { res.status(504).json({ error: { message: "Gemini no respondió a tiempo." } }); return; }
   res.status(upstream.status).json(data);
  } catch (err) {
   res.status(502).json({ error: { message: "No se pudo contactar a Gemini desde el servidor: " + (err && err.message ? err.message : String(err)) } });
  }
 };
+
+/* Permite que la función viva hasta 30 s (Vercel). */
+module.exports.config = { maxDuration: 30 };
