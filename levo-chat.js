@@ -12,17 +12,21 @@
  var MAX_CHARS = 400;      // largo máximo de lo que escribe el alumno
 
  var SISTEMA = [
-  "You are LEVO, a friendly wolf who is an English tutor inside the EVO ENGLISH app.",
-  "Your students are Spanish speakers at level A1 to A2 (beginners).",
-  "Rules:",
-  "- Reply in simple, short English (maximum 3 short sentences).",
-  "- If the student seems lost, add a very short hint in Spanish inside parentheses.",
-  "- If the student writes in Spanish, answer in simple English and give the Spanish meaning in parentheses.",
-  "- If the student makes a mistake, gently show the correct sentence, then continue the conversation.",
-  "- End most replies with ONE simple question to keep the student practicing.",
-  "- Be warm, encouraging and patient. Never be rude.",
-  "- Only talk about learning English and everyday conversation practice. If asked about something else, kindly bring the conversation back to English practice.",
-  "- Never ask for personal data such as address, phone number, passwords or payment details."
+  "You are LEVO, a friendly wolf English tutor inside the EVO ENGLISH app. Students are Spanish speakers at level A1-A2.",
+  "Only talk about learning English. Never ask for personal data (address, phone, passwords, payments).",
+  "MODE A - the student asks how to say something, to translate, or what a word means. Answer EXACTLY in this format (explanations in Spanish, examples in English):",
+  "## ¿Cómo se dice?",
+  ">> <the English sentence>",
+  "## Pronunciación aproximada",
+  "<the sentence respelled for Spanish readers, e.g. Ai jav a buk>",
+  "## Significado de cada palabra",
+  "| Inglés | Español |",
+  "| word | meaning | (one row per word)",
+  "## Tu práctica",
+  "<one short instruction in Spanish: repeat it or write a new sentence>",
+  "MODE B - the student asks how to pronounce something: give '## Pronunciación aproximada' (respelling, stressed syllable in CAPITALS), the '>> sentence' line, and at most 2 short bullet tips in Spanish starting with '- '.",
+  "MODE C - normal practice chat: reply in simple English, maximum 2 short sentences. If the student made a mistake, show the correct sentence in **bold**. Add a short Spanish meaning in parentheses only for new or difficult words. End with ONE simple question.",
+  "Be warm and patient. Never translate everything. Keep answers short."
  ].join("\n");
 
  var estado = { abierto: false, enviando: false, historial: [] };
@@ -52,6 +56,17 @@
    ".levo-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#F4F8FF}",
    ".levo-m{max-width:86%;padding:10px 13px;border-radius:16px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}",
    ".levo-m.bot{align-self:flex-start;background:#fff;border:1px solid #DCE6F8;border-bottom-left-radius:5px}",
+   ".levo-m.rich{white-space:normal;max-width:94%;padding:12px 14px}",
+   ".levo-h{font:700 12px 'Space Grotesk',Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#4B6A9B;margin:12px 0 4px}",
+   ".levo-h:first-child{margin-top:0}",
+   ".levo-big{font:700 21px/1.3 'Space Grotesk',Arial,sans-serif;color:#0E8F54;margin:2px 0 6px}",
+   ".levo-ear{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:999px;border:0;background:#0066FF;color:#fff;font:700 13px 'DM Sans',system-ui,sans-serif;cursor:pointer}",
+   ".levo-ear:focus-visible{outline:3px solid #34D399;outline-offset:2px}",
+   ".levo-m p{margin:0 0 6px}.levo-m p:last-child{margin-bottom:0}",
+   ".levo-m ul{margin:4px 0 4px 18px;padding:0}.levo-m li{margin:2px 0}",
+   ".levo-tbl{width:100%;border-collapse:collapse;font-size:14px;margin:2px 0}",
+   ".levo-tbl th{text-align:left;font-weight:700;color:#4B6A9B;border-bottom:2px solid #DCE6F8;padding:4px 6px 4px 0}",
+   ".levo-tbl td{border-bottom:1px solid #E7EEFA;padding:5px 6px 5px 0}",
    ".levo-m.me{align-self:flex-end;background:#0066FF;color:#fff;border-bottom-right-radius:5px}",
    ".levo-m.err{align-self:center;background:#FDEDEE;color:#8A1F24;font-size:13.5px;text-align:center}",
    ".levo-dots{align-self:flex-start;background:#fff;border:1px solid #DCE6F8;border-radius:16px;padding:12px 14px;display:flex;gap:5px}",
@@ -127,6 +142,74 @@
   }
  }
 
+ function inline(el, txt) {
+  var partes = String(txt).split(/\*\*(.+?)\*\*/);
+  partes.forEach(function (p, i) {
+   if (!p) return;
+   if (i % 2) { var b = document.createElement("strong"); b.textContent = p; el.appendChild(b); }
+   else el.appendChild(document.createTextNode(p));
+  });
+ }
+
+ function hablar(texto) {
+  try {
+   if (!window.speechSynthesis) return;
+   window.speechSynthesis.cancel();
+   var u = new SpeechSynthesisUtterance(texto);
+   u.lang = "en-US"; u.rate = 0.85;
+   window.speechSynthesis.speak(u);
+  } catch (e) {}
+ }
+
+ // Convierte la respuesta de LEVO (mini-formato) en elementos seguros (sin innerHTML).
+ function burbujaLevo(texto) {
+  var d = document.createElement("div");
+  d.className = "levo-m bot rich";
+  var lineas = String(texto).replace(/\r/g, "").split("\n");
+  var ul = null, tabla = null, tbody = null, primeraFila = true;
+  function cerrar() { ul = null; tabla = null; tbody = null; primeraFila = true; }
+  lineas.forEach(function (ln) {
+   var t = ln.trim();
+   if (!t) { cerrar(); return; }
+   var m;
+   if ((m = t.match(/^#{1,3}\s+(.*)$/))) { cerrar(); var h = document.createElement("div"); h.className = "levo-h"; h.textContent = m[1].replace(/\*\*/g, ""); d.appendChild(h); return; }
+   if ((m = t.match(/^>>\s*(.*)$/))) {
+    cerrar();
+    var frase = m[1].replace(/\*\*/g, "").replace(/^["“]|["”]$/g, "");
+    var g = document.createElement("div"); g.className = "levo-big"; g.textContent = frase; d.appendChild(g);
+    var bt = document.createElement("button"); bt.type = "button"; bt.className = "levo-ear";
+    bt.textContent = "🔊 Escuchar"; bt.setAttribute("aria-label", "Escuchar: " + frase);
+    bt.addEventListener("click", function () { hablar(frase); });
+    d.appendChild(bt);
+    return;
+   }
+   if (t.charAt(0) === "|") {
+    if (/^\|?[\s:|-]+\|?$/.test(t)) return; // fila separadora
+    var celdas = t.replace(/^\|/, "").replace(/\|$/, "").split("|");
+    if (!tabla) {
+     ul = null;
+     tabla = document.createElement("table"); tabla.className = "levo-tbl";
+     tbody = document.createElement("tbody"); tabla.appendChild(tbody); d.appendChild(tabla); primeraFila = true;
+    }
+    var tr = document.createElement("tr");
+    celdas.forEach(function (c) { var td = document.createElement(primeraFila ? "th" : "td"); inline(td, c.trim()); tr.appendChild(td); });
+    primeraFila = false; tbody.appendChild(tr);
+    return;
+   }
+   if ((m = t.match(/^[-*•]\s+(.*)$/))) {
+    tabla = null;
+    if (!ul) { ul = document.createElement("ul"); d.appendChild(ul); }
+    var li = document.createElement("li"); inline(li, m[1]); ul.appendChild(li);
+    return;
+   }
+   cerrar();
+   var p = document.createElement("p"); inline(p, t); d.appendChild(p);
+  });
+  els.msgs.appendChild(d);
+  els.msgs.scrollTop = els.msgs.scrollHeight;
+  return d;
+ }
+
  function textoDeRespuesta(data) {
   try {
    var partes = data.candidates[0].content.parts;
@@ -168,7 +251,7 @@
   }
   mostrarEscribiendo(false);
   if (resp) {
-   burbuja(resp, "bot");
+   burbujaLevo(resp);
    estado.historial.push({ role: "model", parts: [{ text: resp }] });
   } else {
    estado.historial.pop();
