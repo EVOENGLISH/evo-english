@@ -2719,8 +2719,9 @@ function ttsProvider(){if(ELEVENLABS_API_KEY)return "elevenlabs";if(OPENAI_API_K
 async function fetchTTSAudio(text){var key=ttsProvider()+":"+text;if(TTS_CACHE[key])return TTS_CACHE[key];var url=null;
  try{
   if(ttsProvider()=="server"){
-   var rs=await fetch("/api/voz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text})});
+   var tv0=performance.now();var rs=await fetch("/api/voz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text})});
    if(!rs.ok){VOZ_OFF_HASTA=Date.now()+600000;throw new Error("voz_"+rs.status)}
+   try{console.log("[EVO voz]",rs.headers.get("X-Voz"),Math.round(performance.now()-tv0)+"ms total")}catch(_){}
    url=URL.createObjectURL(await rs.blob());
   }else if(ttsProvider()=="elevenlabs"){
    var endpoint="https://api.elevenlabs.io/v1/text-to-speech/"+ELEVENLABS_VOICE_ID,r;
@@ -2773,7 +2774,7 @@ function speakBrowser(text,rate){if(!window.speechSynthesis)return;try{speechSyn
 async function say(t,r){var text=T(t).replace(/[“”]/g,""),rate=r||TTS_RATE;
  try{if(window.__sayAu){window.__sayAu.pause();window.__sayAu=null}}catch(_){}
  if(ttsProvider()!="browser"){
-  var partes=(text.match(/[^.!?]+[.!?]*\s*/g)||[text]).map(function(x){return x.trim()}).filter(Boolean).reduce(function(a,sn){var l=a.length?a[a.length-1]:null;if(l&&l.length<60&&(l+" "+sn).length<=280)a[a.length-1]=l+" "+sn;else if(sn.length>280){for(var k=0;k<sn.length;k+=280)a.push(sn.slice(k,k+280))}else a.push(sn);return a},[]);
+  var partes=(text.match(/[^.!?]+[.!?]*\s*/g)||[text]).map(function(x){return x.trim()}).filter(Boolean).reduce(function(a,sn){var l=a.length?a[a.length-1]:null;if(l&&a.length>1&&l.length<60&&(l+" "+sn).length<=280)a[a.length-1]=l+" "+sn;else if(sn.length>280){for(var k=0;k<sn.length;k+=280)a.push(sn.slice(k,k+280))}else a.push(sn);return a},[]);
   if(!partes.length)partes=[text];
   var tok=window.__sayTok=(window.__sayTok||0)+1,ok=false;
   var pend=partes.map(function(p){return fetchTTSAudio(p)}); // se piden todas a la vez; suena la primera en cuanto llega

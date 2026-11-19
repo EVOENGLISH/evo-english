@@ -32,7 +32,7 @@
   { id: "amigos", n: "Hacer amigos", open: "Hey, I don't think we've met! What's your name?", es: "¡Hola, creo que no nos conocemos! ¿Cómo te llamas?", ctx: "Casual small talk with a new friend: hobbies, music, food, weekend plans. Share a little about yourself too." }
  ];
 
- var S = { char: "levo", tema: null, msgs: [], hist: [], busy: false, rec: null, hablar: true, sugerencia: "", talkTimer: null, mem: "", estado: "idle" };
+ var S = { char: "levo", tema: null, msgs: [], hist: [], busy: false, rec: null, hablar: true, sugerencia: "", talkTimer: null, mem: "", estado: "idle", lang: (function () { try { return localStorage.getItem("evoConvLang") === "es" ? "es" : "en"; } catch (e) { return "en"; } })() };
  var els = {};
  var cssListo = false;
 
@@ -165,6 +165,9 @@
    "@keyframes cv-ring{0%{box-shadow:0 0 0 0 rgba(229,72,77,.5)}100%{box-shadow:0 0 0 22px rgba(229,72,77,0)}}",
    ".cv-big:disabled{opacity:.45;cursor:default}",
    ".cv-spc{width:48px;flex:none}",
+   ".cv-lang{width:48px;height:48px;border-radius:14px;border:1px solid #D3DEF2;background:#F4F7FD;color:#3A4F73;font:800 14px 'DM Sans',sans-serif;cursor:pointer;flex:none;line-height:1}",
+   ".cv-lang small{display:block;font:600 9px 'DM Sans',sans-serif;margin-top:2px;color:#6B7FA3}",
+   ".cv-lang.es{background:#FFF1D6;border-color:#F2C46A;color:#7A4B00}",
    ".cv-lbl{margin:6px 0 2px;text-align:center;font:700 15px 'DM Sans',sans-serif;color:#0B2247;min-height:22px}",
    ".cv-live{margin:0 0 8px;padding:10px 14px;border-radius:16px;background:#E8F7EF;border:1px solid #BFE8D2;color:#0B3B2B;font:600 16px/1.35 'DM Sans',sans-serif;max-height:96px;overflow:auto}",
    ".cv-live:empty{display:none}",
@@ -188,7 +191,7 @@
    "<fix>only if the student's last message had a real mistake: one short tip in Spanish with the correct English sentence; else empty</fix>",
    "<try>a natural sentence the student could say next, in English</try>",
    "<mem>updated short notes (max 180 chars) of interests/facts the student shared; keep earlier ones that matter</mem>",
-   "Rules: if the student writes Spanish or seems lost, answer in simple English and add the Spanish meaning in parentheses inside <say>. Be warm, never mock mistakes. Do not translate everything. Stay on English practice. Never ask for personal data (address, phone, passwords, payments)."
+   "Rules: if the student writes Spanish or seems lost, answer in simple English and add the Spanish meaning in parentheses inside <say>. If the student wrote in Spanish, put in <fix> a short line like: En inglés se dice: '...' (the English version of what they said), so they learn it. Be warm, never mock mistakes. Do not translate everything. Stay on English practice. Never ask for personal data (address, phone, passwords, payments)."
   ].filter(Boolean).join("\n");
  }
 
@@ -272,7 +275,7 @@
    + '<div class="cv-foot"><div>'
    + '<button type="button" class="cv-sug" id="cv-sug" data-cv="sug" hidden>' + IC.bulb + '<span id="cv-sugt"></span></button>'
    + '<div class="cv-live" id="cv-live" aria-live="polite"></div>'
-   + (micOk ? '<div class="cv-voice" id="cv-voice"><button type="button" class="cv-kb" data-cv="kb" aria-label="Escribir en vez de hablar">' + IC.kb + '</button><button type="button" class="cv-big" id="cv-mic" data-cv="mic" aria-label="Toca para hablar">' + IC.mic + '</button><span class="cv-spc"></span></div>' : '')
+   + (micOk ? '<div class="cv-voice" id="cv-voice"><button type="button" class="cv-kb" data-cv="kb" aria-label="Escribir en vez de hablar">' + IC.kb + '</button><button type="button" class="cv-big" id="cv-mic" data-cv="mic" aria-label="Toca para hablar">' + IC.mic + '</button><button type="button" class="cv-lang' + (S.lang === "es" ? " es" : "") + '" id="cv-lang" data-cv="lang" aria-label="Idioma con el que hablas al micrófono">' + (S.lang === "es" ? "ES" : "EN") + '<small>' + (S.lang === "es" ? "español" : "inglés") + '</small></button></div>' : '')
    + '<p class="cv-lbl" id="cv-note">' + (micOk ? "Toca el micrófono para hablar" : "Tu navegador no permite hablar aquí. Escribe tu mensaje.") + '</p>'
    + '<form class="cv-row" id="cv-form" autocomplete="off"' + (micOk ? ' hidden' : '') + '>'
    + '<input class="cv-in" id="cv-in" type="text" maxlength="' + MAX_CHARS + '" placeholder="Write in English…" aria-label="Tu mensaje">'
@@ -418,7 +421,7 @@
  // playAudioUrl (index.html) avisa aquí cada vez que empieza un audio de voz.
  window.__evoLip = function (au) {
   if (!els.stage || !document.getElementById("cv-chat")) return;
-  var on = function () { lipStart(au); };
+  var on = function () { LIP.fired = true; lipStart(au); };
   au.addEventListener("playing", on, { once: true });
   ["ended", "pause", "error"].forEach(function (ev) { au.addEventListener(ev, lipStop, { once: true }); });
  };
@@ -426,10 +429,11 @@
  function hablar(texto) {
   var clean = String(texto).replace(/\([^)]*\)/g, "").trim();   // sin la ayuda entre paréntesis
   if (!clean) return;
-  lipCtx();
+  lipCtx(); LIP.fired = false;
   var navegador = true;
   try { navegador = !(typeof window.ttsProvider === "function" && window.ttsProvider() !== "browser"); } catch (e) {}
-  try { if (typeof window.say === "function") window.say(clean); else if (window.speechSynthesis) { window.speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(clean); u.lang = "en-US"; u.rate = 0.92; window.speechSynthesis.speak(u); } } catch (e) {}
+  if (!navegador && els.state) { els.state.textContent = "Preparando voz…"; clearTimeout(S.waitT); S.waitT = setTimeout(function () { if (S.estado !== "talk" && els.state) els.state.textContent = ETIQ[S.estado] || "En línea"; }, 15000); }
+  try { if (typeof window.say === "function") { var pr = window.say(clean); if (!navegador && pr && pr.then) pr.then(function () { if (!LIP.fired && els.stage && S.estado !== "talk") { lipStart(null); S.talkTimer = setTimeout(lipStop, Math.max(1500, clean.split(/\s+/).length * 420)); } }); } else if (window.speechSynthesis) { window.speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(clean); u.lang = "en-US"; u.rate = 0.92; window.speechSynthesis.speak(u); } } catch (e) {}
   caption(texto); clearTimeout(S.talkTimer);
   if (navegador) {
    // voz del navegador: no hay audio que medir, se mueve la boca durante lo que dura la frase
@@ -504,7 +508,7 @@ function micToggle() {
   }
   function iniciar() {
    var rec = new SR(), base = acumulado;
-   rec.lang = "en-US"; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
+   rec.lang = S.lang === "es" ? "es-MX" : "en-US"; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
    S.rec = rec;
    rec.onresult = function (e) {
     var t = ""; for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript + " ";
@@ -550,6 +554,11 @@ function micToggle() {
   else if (a === "nueva") { empezar(S.tema ? S.tema.id : ""); }
   else if (a === "voz") { S.hablar = !S.hablar; x.classList.toggle("on", S.hablar); x.setAttribute("aria-pressed", S.hablar); if (!S.hablar) { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (er) {} } }
   else if (a === "mic") micToggle();
+  else if (a === "lang") {
+   S.lang = S.lang === "es" ? "en" : "es"; try { localStorage.setItem("evoConvLang", S.lang); } catch (er) {}
+   x.classList.toggle("es", S.lang === "es"); x.firstChild.nodeValue = S.lang === "es" ? "ES" : "EN"; x.querySelector("small").textContent = S.lang === "es" ? "español" : "inglés";
+   nota(S.lang === "es" ? "Micrófono en español: háblale en español y LEVO te ayuda a decirlo en inglés." : "Micrófono en inglés: habla en inglés.");
+  }
   else if (a === "kb") { if (els.form) { els.form.hidden = !els.form.hidden; if (!els.form.hidden && els.in) els.in.focus(); } }
   else if (a === "sug") { if (S.sugerencia && els.in) { els.in.value = S.sugerencia; hablar(S.sugerencia); els.in.focus(); } }
  });
