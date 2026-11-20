@@ -22,9 +22,10 @@
    Si la imagen no carga, el degradado solo (con su color de fondo propio)
    deja todo igual que antes -- nunca se rompe la pantalla. */
 .av-wrap,.av-run{
- background:radial-gradient(ellipse 100% 60% at 50% -10%,rgba(22,48,92,.72) 0%,rgba(5,11,22,.92) 68%),
+ background:radial-gradient(ellipse 100% 50% at 50% -8%,rgba(255,196,110,.30) 0%,rgba(255,196,110,0) 62%),
+  linear-gradient(180deg,rgba(20,58,40,.93) 0%,rgba(13,40,29,.95) 45%,rgba(8,26,20,.97) 100%),
   url(assets/mapa/map_bg.jpg) repeat;
- background-size:auto,420px auto;
+ background-size:auto,auto,420px auto;background-color:#0D281D;
  position:relative;overflow:hidden}
 .av-wrap{padding:22px 10px 60px}
 .av-run{padding:22px 18px 30px;color:#EAF2FF}
@@ -36,16 +37,16 @@
 
 .av-head{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;position:relative;z-index:2}
 /* --- HUD como cristal integrado a la escena, no cajas blancas pegadas --- */
-.av-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,214,10,.4);border-radius:99px;padding:8px 14px;font:700 13px "Space Grotesk",Arial,sans-serif;color:#FFD60A;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.av-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,214,10,.45);border-radius:99px;padding:8px 14px;font:700 13px "Space Grotesk",Arial,sans-serif;color:#FFD60A;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .av-pill svg{width:16px;height:16px;stroke:#FFD60A}
 /* --- Barra de progreso total del mapa (HUD) --- */
 .av-prog{position:relative;z-index:2;max-width:340px;margin:2px auto 4px;height:6px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden}
-.av-prog i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#0066FF,#14C2F5);transition:width .4s ease}
-.av-progtxt{position:relative;z-index:2;text-align:center;color:#9FB3D6;font-size:11.5px;font-weight:700;margin:0 0 14px}
+.av-prog i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#34D399,#FFD66B);transition:width .4s ease}
+.av-progtxt{position:relative;z-index:2;text-align:center;color:#BFE3CF;font-size:11.5px;font-weight:700;margin:0 0 14px}
 
 .av-path{position:relative;z-index:1}
 .av-line{position:absolute;top:0;left:0}
-.av-lineon{filter:drop-shadow(0 0 5px rgba(0,102,255,.7))}
+.av-lineon{filter:drop-shadow(0 0 8px rgba(255,214,107,.75))}
 /* --- Decorado ambiental con vida propia: el vapor del café sube, los
    paneles tecnológicos laten muy suave — sutil, nunca la protagonista. --- */
 .av-vapor{animation:av-vapor 3.4s ease-in-out infinite}
@@ -54,11 +55,17 @@
 @keyframes av-glow{0%,100%{opacity:.4}50%{opacity:.7}}
 /* --- Separador de "mundo" (zona): además de título, hace de punto de
    control real mostrando cuántos retos de esa zona ya se superaron. --- */
-.av-mundo{position:absolute;left:0;right:0;text-align:center;z-index:1}
-.av-mundo span{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(0,102,255,.4);color:#9FB3D6;font:700 11px "Space Grotesk",Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:6px 16px;border-radius:99px}
-.av-mundo span svg{stroke:#FFD60A;width:13px;height:13px}
-.av-mundo span em{font-style:normal;color:#fff;background:rgba(255,255,255,.12);border-radius:99px;padding:1px 8px;margin-left:2px}
-.av-mundo.listo span{background:rgba(255,214,10,.14);color:#FFD60A}
+.av-mundo{position:absolute;left:50%;transform:translateX(-50%);width:min(92vw,440px);z-index:1}
+.avz{position:relative;height:140px;border-radius:22px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.45),0 0 0 2px rgba(255,255,255,.14);background:#143A28}
+.avz img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.avz::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,20,14,0) 38%,rgba(4,20,14,.82) 100%)}
+.avz-txt{position:absolute;left:14px;right:70px;bottom:11px;z-index:2;display:flex;flex-direction:column;gap:2px}
+.avz-k{display:inline-flex;align-items:center;gap:5px;font:800 11px "DM Sans",Arial,sans-serif;letter-spacing:.12em;color:#FFD66B}
+.avz-k svg{stroke:#FFD66B;width:13px;height:13px}
+.avz-txt b{font:700 17px/1.15 "Space Grotesk",Arial,sans-serif;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.avz-n{position:absolute;right:12px;bottom:12px;z-index:2;font:800 13px "DM Sans",Arial,sans-serif;font-style:normal;color:#fff;background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.3);border-radius:99px;padding:4px 11px}
+.av-mundo.listo .avz{box-shadow:0 12px 28px rgba(0,0,0,.45),0 0 0 3px #FFD66B,0 0 26px rgba(255,214,107,.45)}
+.av-mundo.listo .avz-n{background:#FFD66B;color:#3A2A00;border-color:#FFD66B}
 
 /* --- NODOS: posicionados sobre la curva en "S" --- */
 .av-node{position:absolute;width:88px;display:flex;flex-direction:column;align-items:center;transform:translateX(-50%);z-index:1}
@@ -85,7 +92,7 @@
 /* --- Retos futuros: bloqueados hasta llegar a ellos en orden --- */
 .av-node.bloqueado .av-btn{background:url(assets/mapa/node_locked.png) center/cover,linear-gradient(180deg,#232E44 0%,#161E30 100%);box-shadow:0 5px 0 #0A1220,0 8px 14px rgba(0,0,0,.35);cursor:not-allowed}
 .av-node.bloqueado .av-btn svg{display:none}
-.av-node.bloqueado .av-lbl{color:#5A6B8C}
+.av-node.bloqueado .av-lbl{color:#A7C2B3}
 /* --- Vista previa de admin: el nodo sigue mostrando el candado (sigue
    bloqueado para los alumnos), pero el admin sí puede tocarlo -- un aro
    dorado + etiqueta "Vista previa" avisan que es la excepción de admin,
@@ -111,10 +118,28 @@
 /* --- Medalla de estrella para retos ya completados --- */
 .av-medalla{position:absolute;top:-6px;right:-2px;width:20px;height:20px;background:#0B1F3A;border:2px solid #FFD60A;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .av-medalla svg{width:11px;height:11px;fill:#FFD60A;stroke:none;filter:none}
-.av-lbl{margin-top:10px;font-size:11.5px;color:#9FB3D6;text-align:center;line-height:1.3;max-width:100px}
+.av-lbl{margin-top:8px;font-size:11.5px;color:#E6F6EC;text-align:center;line-height:1.25;max-width:104px;padding:3px 9px;border-radius:12px;background:rgba(6,28,20,.66);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .av-node.actual .av-lbl{color:#fff;font-weight:700}
 .av-lbl em{display:block;font-style:normal;color:#FFD60A;font-weight:700;margin-top:2px;font-size:10px;letter-spacing:.04em;text-transform:uppercase}
 @media (min-width:640px){.av-node{width:110px}.av-lbl{max-width:120px}}
+
+/* --- Cofre del tesoro: el desafío que cierra cada zona --- */
+.av-node.tipo-desafio .av-btn,.av-node.tipo-desafio.hecho .av-btn,.av-node.tipo-desafio.actual .av-btn,.av-node.tipo-desafio.bloqueado .av-btn{width:88px;height:88px;border-radius:0;clip-path:none;background:none!important;box-shadow:none!important}
+.av-node.tipo-desafio .av-btn svg{display:none}
+.av-chest{width:88px;height:88px;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5));pointer-events:none;transition:transform .2s}
+.av-node.tipo-desafio.bloqueado .av-chest{filter:grayscale(.85) brightness(.6) drop-shadow(0 6px 6px rgba(0,0,0,.5))}
+.av-node.tipo-desafio.actual .av-chest{animation:av-bota 1.6s ease-in-out infinite;filter:drop-shadow(0 0 14px rgba(255,214,107,.85)) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.av-node.tipo-desafio.hecho .av-chest{filter:drop-shadow(0 0 12px rgba(255,214,107,.7)) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+@keyframes av-bota{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-5px) rotate(2deg)}}
+/* --- Globito del lobito en el reto actual --- */
+.av-bubble{position:absolute;top:-30px;left:50%;transform:translateX(-50%);z-index:3;white-space:nowrap;background:#fff;color:#0B3B2B;font:800 12px "DM Sans",Arial,sans-serif;padding:5px 11px;border-radius:99px;box-shadow:0 4px 12px rgba(0,0,0,.35);animation:av-flota 2s ease-in-out infinite;pointer-events:none}
+.av-bubble::after{content:"";position:absolute;left:50%;bottom:-5px;width:10px;height:10px;background:#fff;transform:translateX(-50%) rotate(45deg);border-radius:2px}
+@keyframes av-flota{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-4px)}}
+/* --- Luciérnagas del bosque --- */
+.av-amb{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:3}
+.av-amb i{position:absolute;width:5px;height:5px;border-radius:50%;background:#C8FFB0;box-shadow:0 0 10px 2px rgba(200,255,176,.8);opacity:0;animation:av-luz 5s ease-in-out infinite}
+@keyframes av-luz{0%,100%{opacity:0;transform:translate(0,0)}50%{opacity:.9;transform:translate(10px,-16px)}}
+@media (prefers-reduced-motion:reduce){.av-amb i,.av-bubble,.av-node.tipo-desafio.actual .av-chest{animation:none!important}.av-amb i{opacity:.5}}
 
 /* --- Panel de información del nodo tocado (reutiliza .mmwrap/.mmcard) --- */
 .avpcard{max-width:320px;text-align:center}

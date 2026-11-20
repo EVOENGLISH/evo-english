@@ -4340,7 +4340,7 @@ var AventuraEngine = (function () {
   var pts = [], holgura = 0, mundoAnterior = null, idxMundo = -1;
   for (var i = 0; i < n; i++) {
    var mu = MISIONES[i] && MISIONES[i].mundo;
-   if (mu !== mundoAnterior) { if (mundoAnterior !== null) holgura += 52; mundoAnterior = mu; idxMundo++; }
+   if (mu !== mundoAnterior) { holgura += 176; mundoAnterior = mu; idxMundo++; }   // aire para el paisaje de la zona
    var amp = ZONA_AMPLITUD[idxMundo % ZONA_AMPLITUD.length], frec = ZONA_FREC[idxMundo % ZONA_FREC.length];
    // El desafío que cierra la zona siempre aterriza al centro (x=0): es la
    // "plaza" del checkpoint. El resto ondula con la onda propia de su zona
@@ -4391,7 +4391,7 @@ var AventuraEngine = (function () {
  }
  var DECO_ZONA = [decoCafe, decoViajes, decoVidaDiaria, decoTrabajo];
  function decoradoDe(idxMundo, i, pt) {
-  if (i === 0) return ""; // nada antes del primer nodo del camino
+  return ""; // el decorado azul de antes se reemplazó por paisajes ilustrados y huellitas
   var lado = i % 2 === 0 ? -32 : 32, x = pt[0] + lado, y = pt[1] - 44;
   return DECO_ZONA[idxMundo % DECO_ZONA.length](x, y);
  }
@@ -4411,11 +4411,11 @@ var AventuraEngine = (function () {
   var clickable = st === "hecho" || st === "actual" || previaAdmin, tag = clickable ? "button" : "div";
   var extra = clickable ? ' data-a="av-abrir" data-mid="' + esc(m.id) + '"' : "";
   var enCurso = st === "actual" && estaEnProgreso(m.id), dominada = st === "hecho" && estaDominada(m.id);
-  var iconoHTML = st === "actual" ? rostroLevo(40) : (st === "bloqueado" ? ic("lock", 22) : ic(tipo.icono, 26));
+  var iconoHTML = m.tipo === "desafio" ? '<img class="av-chest" src="assets/mapa/cofre.png" alt="" width="84" height="84" loading="lazy">' : st === "actual" ? '<img src="assets/mascot/lobito.png" alt="" width="52" height="52" style="width:52px;height:52px;object-fit:contain;pointer-events:none">' : (st === "bloqueado" ? ic("lock", 22) : ic(tipo.icono, 26));
   var etiquetaAhora = enCurso ? "Continúa aquí" : "Ahora";
   var etiquetaAria = previaAdmin ? esc(m.titulo) + " (bloqueado para alumnos, vista previa de admin)" : esc(m.titulo);
   return '<div class="av-node ' + st + " tipo-" + m.tipo + (dominada ? " dominada" : "") + (previaAdmin ? " av-prevadmin" : "") + '" style="left:' + left + 'px;top:' + top + 'px">'
-   + (st === "actual" ? '<span class="av-ring" aria-hidden="true"></span>' : "")
+   + (st === "actual" ? '<span class="av-ring" aria-hidden="true"></span><span class="av-bubble" aria-hidden="true">' + (enCurso ? "¡Sigue!" : "¡Vamos!") + '</span>' : "")
    + '<' + tag + ' class="av-btn"' + extra + (clickable ? ' aria-label="' + etiquetaAria + '"' : ' aria-label="' + esc(m.titulo) + ' (bloqueado)" aria-disabled="true"') + '>' + iconoHTML
    + (st === "hecho" ? '<span class="av-medalla">' + ic(dominada ? "crown" : "star", 12) + "</span>" : "")
    + '</' + tag + '>'
@@ -4425,11 +4425,34 @@ var AventuraEngine = (function () {
  // cuántas misiones reales de esa zona ya se superaron y se ilumina en
  // dorado cuando la zona queda completa (checkpoint real, no decorativo).
  function separadorMundoHTML(mundo, idxMundo, top, hechas, total) {
-  var color = CONFIG.coloresZona[idxMundo % CONFIG.coloresZona.length], completa = hechas === total;
-  return '<div class="av-mundo' + (completa ? " listo" : "") + '" style="top:' + (top - 68) + 'px">'
-   + '<span style="border-color:' + color + '">'
-   + (completa ? ic("trophy", 13) + " " : "") + "Zona " + (idxMundo + 1) + " · " + esc(mundo)
-   + '<em>' + hechas + "/" + total + "</em></span></div>";
+  var completa = hechas === total, n = (idxMundo % 10) + 1;
+  return '<div class="av-mundo' + (completa ? " listo" : "") + '" style="top:' + (top - 168) + 'px">'
+   + '<div class="avz">'
+   + '<img src="assets/mapa/zona-' + n + '.jpg" alt="" loading="lazy" decoding="async">'
+   + '<div class="avz-txt"><span class="avz-k">' + (completa ? ic("trophy", 13) + " " : "") + 'ZONA ' + (idxMundo + 1) + '</span>'
+   + '<b>' + esc(mundo) + '</b></div>'
+   + '<em class="avz-n">' + hechas + "/" + total + '</em></div></div>';
+ }
+ // Huellitas de lobo sobre el sendero: doradas donde ya pasaste, tenues donde falta.
+ function huellaSVG(x, y, ang, hecha) {
+  return '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + ang.toFixed(0) + ') scale(.78)" fill="' + (hecha ? "#FFE08A" : "#F1D9A8") + '" opacity="' + (hecha ? ".95" : ".34") + '">'
+   + '<ellipse cx="0" cy="3.5" rx="5.4" ry="4.6"/><ellipse cx="-6" cy="-3.2" rx="2.3" ry="3"/><ellipse cx="-2" cy="-6.6" rx="2.3" ry="3"/><ellipse cx="2.4" cy="-6.6" rx="2.3" ry="3"/><ellipse cx="6.2" cy="-3.2" rx="2.3" ry="3"/></g>';
+ }
+ function bez(a, b, t) {
+  var midY = (a[1] + b[1]) / 2, u = 1 - t;
+  return [u * u * u * a[0] + 3 * u * u * t * a[0] + 3 * u * t * t * b[0] + t * t * t * b[0],
+          u * u * u * a[1] + 3 * u * u * t * midY + 3 * u * t * t * midY + t * t * t * b[1]];
+ }
+ function huellasEntre(a, b, hecha) {
+  var out = "", ts = [0.3, 0.5, 0.7];
+  for (var k = 0; k < ts.length; k++) {
+   var p0 = bez(a, b, ts[k] - 0.02), p1 = bez(a, b, ts[k] + 0.02), p = bez(a, b, ts[k]);
+   // la huella apunta (hacia arriba en su dibujo) en la dirección de avance
+   var ang = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]) * 180 / Math.PI + 90;
+   var lado = k % 2 === 0 ? -6 : 6, nx = -(p1[1] - p0[1]), ny = p1[0] - p0[0], len = Math.sqrt(nx * nx + ny * ny) || 1;
+   out += huellaSVG(p[0] + lado * nx / len, p[1] + lado * ny / len, ang, hecha);
+  }
+  return out;
  }
  function vistaMapa() {
   var pts = puntosCamino(MISIONES.length),
@@ -4437,8 +4460,8 @@ var AventuraEngine = (function () {
    altoTotal = pts[pts.length - 1][1] + 90,
    nivel = nivelUsuario(), p = progreso();
   var nodos = "", separadores = "", decorado = "", mundoAnterior = null, idxMundo = -1, iActual = -1;
+  MISIONES.forEach(function (m, i) { if (estadoNodo(i) === "actual" && iActual === -1) iActual = i; });
   MISIONES.forEach(function (m, i) {
-   if (estadoNodo(i) === "actual" && iActual === -1) iActual = i;
    if (m.mundo !== mundoAnterior) {
     idxMundo++;
     var deMundo = MUNDOS[idxMundo].misiones,
@@ -4453,7 +4476,13 @@ var AventuraEngine = (function () {
    pctMapa = Math.round(totalHechas / MISIONES.length * 100),
    trazoLuz = iActual === -1 ? pts.length - 1 : iActual,
    zonaActual = MUNDOS[Math.max(0, idxMundo0DeActual(iActual))].titulo;
+  // El sendero pasa por el CENTRO de cada nodo (el nodo se ancla por su borde superior).
+  var ptsC = pts.map(function (q) { return [q[0], q[1] + 34]; }), huellas = "";
+  for (var hi = 1; hi < ptsC.length; hi++) huellas += huellasEntre(ptsC[hi - 1], ptsC[hi], hi <= trazoLuz);
+  var luciernagas = "";
+  for (var fi = 0; fi < 18; fi++) luciernagas += '<i style="left:' + ((fi * 37 + 11) % 96 + 2) + '%;top:' + ((fi * 53 + 7) % 94 + 2) + '%;animation-delay:' + ((fi * 0.57) % 6).toFixed(2) + 's;animation-duration:' + (4 + (fi % 4)) + 's"></i>';
   return '<div class="av-wrap av-fullscreen">'
+   + '<div class="av-amb" aria-hidden="true">' + luciernagas + '</div>'
    + '<div class="av-head">'
    + '<span class="av-pill">' + ic("trophy", 18) + " " + (PROG.streak || 0) + " " + ((PROG.streak || 0) === 1 ? "día" : "días") + "</span>"
    + '<span class="av-pill">' + ic("target", 18) + " Nivel " + nivel + "</span>"
@@ -4463,9 +4492,11 @@ var AventuraEngine = (function () {
    + '<p class="av-progtxt">' + totalHechas + ' / ' + MISIONES.length + ' retos superados · ' + esc(zonaActual) + '</p>'
    + '<div class="av-path" style="height:' + altoTotal + 'px;width:' + anchoTotal + 'px;margin:0 auto;position:relative">'
    + '<svg class="av-line" width="' + anchoTotal + '" height="' + altoTotal + '" viewBox="0 0 ' + anchoTotal + " " + altoTotal + '" aria-hidden="true">'
-   + '<path d="' + trazoSVG(pts) + '" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="4" stroke-dasharray="2 14" stroke-linecap="round"/>'
-   + '<path d="' + trazoSVG(pts, trazoLuz) + '" fill="none" stroke="rgba(0,102,255,.65)" stroke-width="4" stroke-dasharray="2 14" stroke-linecap="round" class="av-lineon"/>'
-   + decorado + "</svg>" + separadores + nodos + "</div></div>";
+   + '<path d="' + trazoSVG(ptsC) + '" fill="none" stroke="#3A2412" stroke-opacity=".55" stroke-width="34" stroke-linecap="round"/>'
+   + '<path d="' + trazoSVG(ptsC) + '" fill="none" stroke="#9C6B38" stroke-opacity=".85" stroke-width="24" stroke-linecap="round"/>'
+   + '<path d="' + trazoSVG(ptsC) + '" fill="none" stroke="#C99B5E" stroke-opacity=".55" stroke-width="12" stroke-linecap="round"/>'
+   + '<path d="' + trazoSVG(ptsC, trazoLuz) + '" fill="none" stroke="#FFD66B" stroke-opacity=".5" stroke-width="30" stroke-linecap="round" class="av-lineon"/>'
+   + huellas + decorado + "</svg>" + separadores + nodos + "</div></div>";
  }
  // Índice del mundo (0-based) al que pertenece el reto actual — para que el
  // HUD pueda decir en qué zona está el estudiante ahora mismo (responde
