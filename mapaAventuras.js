@@ -4411,7 +4411,7 @@ var AventuraEngine = (function () {
   var clickable = st === "hecho" || st === "actual" || previaAdmin, tag = clickable ? "button" : "div";
   var extra = clickable ? ' data-a="av-abrir" data-mid="' + esc(m.id) + '"' : "";
   var enCurso = st === "actual" && estaEnProgreso(m.id), dominada = st === "hecho" && estaDominada(m.id);
-  var iconoHTML = m.tipo === "desafio" ? '<img class="av-chest" src="assets/mapa/cofre.png" alt="" width="84" height="84" loading="lazy">' : st === "actual" ? '<img src="assets/mascot/lobito.png" alt="" width="52" height="52" style="width:52px;height:52px;object-fit:contain;pointer-events:none">' : (st === "bloqueado" ? ic("lock", 22) : ic(tipo.icono, 26));
+  var iconoHTML = m.tipo === "desafio" ? '<img class="av-chest" src="assets/mapa/cofre.png" alt="" width="84" height="84" loading="lazy">' : st === "actual" ? '<img src="assets/mascot/lobito-feliz.png" alt="" width="52" height="52" style="width:52px;height:52px;object-fit:contain;pointer-events:none">' : (st === "bloqueado" ? ic("lock", 22) : ic(tipo.icono, 26));
   var etiquetaAhora = enCurso ? "Continúa aquí" : "Ahora";
   var etiquetaAria = previaAdmin ? esc(m.titulo) + " (bloqueado para alumnos, vista previa de admin)" : esc(m.titulo);
   return '<div class="av-node ' + st + " tipo-" + m.tipo + (dominada ? " dominada" : "") + (previaAdmin ? " av-prevadmin" : "") + '" style="left:' + left + 'px;top:' + top + 'px">'
