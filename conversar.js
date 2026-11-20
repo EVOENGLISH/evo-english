@@ -64,6 +64,42 @@
  function inyectarCSS() {
   if (cssListo) return; cssListo = true;
   var css = [
+   ".hb{position:relative;display:block;width:100%;min-height:226px;overflow:hidden;border:0;border-radius:26px;padding:0;text-align:left;cursor:pointer;color:#fff;background:#07241C;box-shadow:0 14px 34px rgba(7,36,28,.35);font-family:'DM Sans',Arial,sans-serif;-webkit-tap-highlight-color:transparent}",
+   ".hb:active{transform:scale(.99)}",
+   ".hb-bg{position:absolute;inset:0;background:linear-gradient(100deg,rgba(5,30,23,.94) 28%,rgba(5,30,23,.55) 62%,rgba(5,30,23,.15)),url(assets/platform-bg.jpg) center/cover}",
+   ".hb-fx i{position:absolute;width:6px;height:6px;border-radius:50%;background:#B8FF9E;box-shadow:0 0 10px #B8FF9E;opacity:.0;animation:hb-ff 5s ease-in-out infinite}",
+   ".hb-fx i:nth-child(1){left:48%;top:22%}.hb-fx i:nth-child(2){left:58%;top:62%;animation-delay:1.3s}.hb-fx i:nth-child(3){left:40%;top:78%;animation-delay:2.4s}.hb-fx i:nth-child(4){left:70%;top:18%;animation-delay:3.1s}.hb-fx i:nth-child(5){left:86%;top:50%;animation-delay:.7s}",
+   "@keyframes hb-ff{0%,100%{opacity:0;transform:translateY(0)}50%{opacity:.95;transform:translateY(-12px)}}",
+   ".hb-txt{position:relative;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:18px 14px 18px 18px;max-width:60%}",
+   ".hb-kick{display:inline-flex;align-items:center;gap:7px;padding:4px 10px;border-radius:99px;background:rgba(52,211,153,.18);border:1px solid rgba(52,211,153,.5);color:#9CF2CB;font:800 11px 'DM Sans',sans-serif;letter-spacing:.08em}",
+   ".hb-live{width:8px;height:8px;border-radius:50%;background:#34D399;box-shadow:0 0 8px #34D399;animation:hb-pulse 1.4s infinite}",
+   "@keyframes hb-pulse{50%{transform:scale(1.5);opacity:.6}}",
+   ".hb-txt b{font:700 22px/1.12 'Space Grotesk',Arial,sans-serif;letter-spacing:-.01em}",
+   ".hb-txt small{font-size:13.5px;line-height:1.35;color:rgba(255,255,255,.88)}",
+   ".hb-cta{display:inline-flex;align-items:center;gap:8px;margin-top:4px;padding:10px 14px;border-radius:99px;white-space:nowrap;background:linear-gradient(135deg,#22C37A,#12A85F);color:#fff;font:800 13.5px 'DM Sans',sans-serif;box-shadow:0 8px 18px rgba(18,168,95,.45)}",
+   ".hb-cta svg{width:18px;height:18px}",
+   ".hb-eq{display:inline-flex;align-items:flex-end;gap:2px;height:14px;margin-left:2px}",
+   ".hb-eq i{width:3px;border-radius:2px;background:#fff;animation:hb-eq 1s ease-in-out infinite}",
+   ".hb-eq i:nth-child(1){height:6px}.hb-eq i:nth-child(2){height:12px;animation-delay:.15s}.hb-eq i:nth-child(3){height:8px;animation-delay:.3s}.hb-eq i:nth-child(4){height:14px;animation-delay:.45s}",
+   "@keyframes hb-eq{50%{transform:scaleY(.4)}}",
+   ".hb-wolves{position:absolute;right:0;bottom:0;height:88%;width:44%;z-index:1;pointer-events:none}",
+   ".hb-wolves img{position:absolute;bottom:0;height:100%;width:auto;max-width:none;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}",
+   ".hb-wolves img.a{right:34%;height:86%;opacity:.95}.hb-wolves img.b{right:-14%}",
+   "@media (max-width:360px){.hb-txt b{font-size:19px}.hb-txt{max-width:68%}}",
+   "@media (prefers-reduced-motion:reduce){.hb-fx i,.hb-live,.hb-eq i{animation:none!important}.hb-fx i{opacity:.6}}",
+   ".hub-stage{position:relative;overflow:hidden;border-radius:26px;margin:0 0 18px;min-height:210px;background:#07241C url(assets/platform-bg.jpg) center/cover;box-shadow:0 14px 34px rgba(7,36,28,.3)}",
+   ".hub-stage::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,30,23,.15),rgba(5,30,23,.72))}",
+   ".hub-stage img{position:absolute;bottom:0;height:92%;width:auto;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}",
+   ".hub-stage img.l{left:50%;transform:translateX(-96%)}.hub-stage img.v{left:50%;transform:translateX(-4%)}",
+   ".hub-stage p{position:absolute;left:0;right:0;bottom:12px;margin:0;text-align:center;color:#E3FFF1;font:700 14px 'DM Sans',sans-serif;z-index:2;text-shadow:0 2px 6px rgba(0,0,0,.6)}",
+   ".hub-big{display:flex;align-items:center;gap:14px;width:100%;margin:0 0 12px;padding:18px;border-radius:22px;border:0;text-align:left;cursor:pointer;color:#fff;font-family:'DM Sans',Arial,sans-serif}",
+   ".hub-big .ico{flex:none;width:56px;height:56px;border-radius:18px;display:grid;place-items:center;background:rgba(255,255,255,.2)}",
+   ".hub-big .ico svg{width:30px;height:30px;color:#fff;stroke:#fff}",
+   ".hub-big b{display:block;font:700 20px 'Space Grotesk',Arial,sans-serif;margin-bottom:2px}",
+   ".hub-big small{display:block;font-size:14px;line-height:1.35;opacity:.92}",
+   ".hub-big.free{background:linear-gradient(135deg,#12A85F,#0B7A5A);box-shadow:0 12px 26px rgba(18,168,95,.32)}",
+   ".hub-big.guided{background:linear-gradient(135deg,#5B4FD6,#8B5CF6);opacity:.75;cursor:default}",
+   ".hub-tag{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:99px;background:rgba(255,255,255,.25);font:800 11px 'DM Sans',sans-serif;letter-spacing:.05em;vertical-align:middle}",
    ".cv-pair{display:grid;grid-template-columns:1fr;gap:12px;margin:0 0 18px}",
    "@media (min-width:640px){.cv-pair{grid-template-columns:1fr 1fr}}",
    ".cv-card{display:flex;align-items:center;gap:14px;text-align:left;width:100%;padding:16px;border-radius:20px;border:1px solid var(--line,#D3E4F7);background:#fff;color:var(--ink,#0B2247);font:inherit;cursor:pointer;min-height:84px}",
@@ -230,6 +266,27 @@
  }
 
  /* ---------- vistas ---------- */
+ function banner() {
+  inyectarCSS();
+  var lv = PERSONAJES[0], la = PERSONAJES[1];
+  return '<section class="home-sec"><button type="button" class="hb" data-href="#/hablar" aria-label="Ir a Habla: practica conversando con LEVO o LEVA">'
+   + '<span class="hb-bg"></span><span class="hb-fx" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>'
+   + '<span class="hb-txt"><span class="hb-kick"><i class="hb-live"></i>NUEVO · HABLA</span>'
+   + '<b>Habla inglés de verdad</b><small>Conversa con LEVO o LEVA y construye tu fluidez.</small>'
+   + '<span class="hb-cta">' + IC.mic + 'Empezar a hablar<span class="hb-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></span></span>'
+   + '<span class="hb-wolves" aria-hidden="true"><img class="a" src="' + la.poses.idle + '" alt=""><img class="b" src="' + lv.poses.idle + '" alt=""></span>'
+   + '</button></section>';
+ }
+
+ function vistaHub() {
+  inyectarCSS();
+  var lv = PERSONAJES[0], la = PERSONAJES[1];
+  return '<div class="hero"><div><h1>Habla</h1><p class="sub">Construye tu fluidez conversando de verdad</p></div></div>'
+   + '<div class="hub-stage"><img class="l" src="' + lv.poses.idle + '" alt=""><img class="v" src="' + la.poses.idle + '" alt=""><p>LEVO y LEVA te esperan para conversar</p></div>'
+   + '<button type="button" class="hub-big free" data-href="#/conversar"><span class="ico">' + IC.mic + '</span><span><b>Práctica libre</b><small>Habla de lo que quieras con LEVO o LEVA. Ellos te corrigen y te ayudan a decirlo mejor.</small></span></button>'
+   + '<button type="button" class="hub-big guided" aria-disabled="true" data-t="La práctica guiada llega muy pronto"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h12a4 4 0 0 1 4 4v10H8a4 4 0 0 1-4-4V5zM8 9h8M8 13h5"/></svg></span><span><b>Práctica guiada<span class="hub-tag">PRONTO</span></b><small>Lecciones habladas paso a paso, de A1 a C2, como con un profesor nativo.</small></span></button>';
+ }
+
  function cta() {
   inyectarCSS();
   return '<div class="cv-pair">'
@@ -290,6 +347,7 @@
  }
 
  function vista(seg) {
+  if (seg && seg[0] === "hub") return vistaHub();
   if (seg && seg[0] === "chat" && S.msgs.length) return vistaChat();
   return vistaInicio();
  }
@@ -582,5 +640,5 @@ function micToggle() {
   }
  });
 
- window.ConversarEngine = { vista: vista, cta: cta };
+ window.ConversarEngine = { vista: vista, cta: cta, banner: banner };
 })();

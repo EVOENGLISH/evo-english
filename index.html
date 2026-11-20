@@ -3938,6 +3938,7 @@ function navigateToAdventure(){location.hash="#/mapa"}
 function renderHome(){
  var lv=activeLevel(),u=cur(),nx=nextL(),lbl2=nx?nx.u.ls[nx.i].t:"Unidad completa",href=nx?"#/leccion/"+lv+"/"+nx.u.n+"/"+(nx.i+1):"#/lecciones/"+lv,thumb=nx&&nx.u.ls[nx.i].thumb;
  return homeHeaderHTML(lv)
+  +(typeof ConversarEngine!=="undefined"?ConversarEngine.banner():"")
   +adventureBannerHTML()
   +activeLessonCardHTML(u,lbl2,href,thumb)
   +readingBannerHTML();
@@ -3949,6 +3950,7 @@ lecciones:function(){var seg=ROUTE.slice(1);
  if(!seg[1])return unitsView(seg[0]);
  return unitView(seg[0],+seg[1])},
 mapa:function(){return AventuraEngine.vista(ROUTE.slice(1))},
+hablar:function(){return ConversarEngine.vista(["hub"])},
 conversar:function(){return ConversarEngine.vista(ROUTE.slice(1))},
 leccion:function(){return leccionView(ROUTE.slice(1))},
 videos:function(){var seg=ROUTE.slice(1);
@@ -4015,7 +4017,8 @@ function parentHash(){var r=ROUTE;
  if(r[0]=="practica"){if(r[1]&&r[2])return "#/practica/"+r[1];if(r[1])return "#/practica";return "#/inicio"}
  if(r[0]=="videos"){if(r[3])return "#/videos/"+r[1]+"/"+r[2];if(r[2])return "#/videos/"+r[1];if(r[1])return "#/videos";return "#/practica"}
  if(r[0]=="insignias"||r[0]=="clasificacion")return "#/progreso";
- if(r[0]=="conversar"){if(r[1])return "#/conversar";return "#/practica"}
+ if(r[0]=="hablar")return "#/inicio";
+ if(r[0]=="conversar"){if(r[1])return "#/conversar";return "#/hablar"}
  return "#/inicio"}
 var BACKANIM=false;
 function goBack(){if(!needsBack())return;var target=parentHash();if(target==location.hash)return;
