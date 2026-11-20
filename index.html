@@ -2888,7 +2888,7 @@ function stepHTML(s,fresh){var h='<span class="stag"'+stagStyle(s.t)+'>'+(s.tag|
  else if(s.t=="real")h+='<h2>Libro vs. vida real</h2><div class="rl"><div class="rb2"><small>'+ic("book",14)+'Libro</small><b>'+T(s.book)+'</b></div><div class="rb2 rn"><small>'+ic("users",14)+'Conversación</small><b>'+T(s.real)+'</b>'+sbtn(s.real)+'</div></div><p class="es2">'+T(s.es)+'</p><div class="pron"><small>Suena rápido así</small><i>'+T(s.fast)+'</i></div><p>'+T(s.ctx)+'</p><div class="tgs">'+s.tags.map(tg).join("")+'</div>';
  else if(s.t=="speak"){var mc=RUN.mic;
   h+='<h2 class="q">Di esto en voz alta</h2><div class="bigp">'+T(s.say)+'</div><p>'+sbtn(s.say)+'<button class="sb2 sl" data-a="say" data-s="'+esc(T(s.say))+'" data-r=".6">Lento</button></p><p class="es2">'+T(s.es)+'</p>'+(s.tip?'<div class="note">'+ic("mic",18)+'<span>'+T(s.tip)+'</span></div>':"")
-  +'<div class="micwrap"><button class="micbtn'+(mc&&mc.listening?" rec":"")+'" data-a="mic"'+(mc&&mc.listening?" disabled":"")+' aria-label="Grabar tu pronunciación">'+ic("mic",28)+'</button><span class="micl">'+(mc&&mc.listening?"Escuchando… habla ahora":"Toca el micrófono y repite la frase")+'</span></div>'
+  +'<div class="micwrap"><button class="micbtn'+(mc&&mc.listening?" rec":"")+'" data-a="mic"'+""+' aria-label="Grabar tu pronunciación">'+ic("mic",28)+'</button><span class="micl">'+(mc&&mc.listening?"Escuchando… toca de nuevo para terminar":"Toca el micrófono, habla y toca otra vez para terminar")+'</span></div>'+micInfo(mc)
   +(mc&&mc.pct!=null?'<div class="fb '+(mc.pct>=80?"ok":mc.pct>=50?"try":"no")+'"><b>'+(mc.pct>=80?"¡"+mc.pct+"% de precisión! Excelente pronunciación.":mc.pct>=50?mc.pct+"% de precisión. Vas bien, sigue practicando.":mc.pct+"% de precisión. Intenta de nuevo.")+'</b><small>Se entendió: “'+esc(mc.transcript)+'”'+(mc.demo?" · modo de prueba, sin usar tu micrófono":"")+'</small></div>':"");}
  else if(s.t=="situation"){var si=RUN.sit||{picked:null};
   h+='<h2>'+ic("users",20)+' Situation</h2><p class="goal">'+T(s.intro)+'</p>'+bub(s.start,1)
@@ -2957,23 +2957,39 @@ function showMicModal(){var m=$("micmodal");if(!m)return;
 function closeMicModal(){var m=$("micmodal");if(m)m.innerHTML=""}
 var MICCTX=null;
 function fallbackMicWith(){if(!MICCTX)return;var pct=82+Math.floor(Math.random()*16);closeMicModal();MICCTX.setResult(pct,MICCTX.target,true)}
+var MICREC=null;
+function micInfo(mc){if(!mc)return"";
+ if(mc.listening)return '<div class="note" style="margin-top:10px">'+ic("mic",18)+'<span>'+(mc.live?"“"+esc(mc.live)+"”":"Te escucho… di la frase en inglés.")+'</span></div>';
+ if(mc.err)return '<div class="fb no" style="margin-top:10px"><b>'+esc(mc.err)+'</b></div>';
+ return""}
+function micMsg(code){
+ if(code=="not-allowed"||code=="service-not-allowed")return"El navegador bloqueó el micrófono. Toca el candado junto a la dirección, permite el micrófono y vuelve a intentar.";
+ if(code=="audio-capture")return"No encuentro un micrófono conectado a tu equipo.";
+ if(code=="network")return"Se necesita internet para reconocer tu voz.";
+ return"No te escuché. Acércate al micrófono, habla un poco más fuerte y vuelve a intentar."}
 function startMicWith(ctx){MICCTX=ctx;
+ if(MICREC){try{MICREC.__stop()}catch(_){}return} // segundo toque = terminar
  if(inIframe()){showMicModal();return}
  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!SR){showMicModal();return}
- ctx.setListening(true);
- try{
-  var rec=new SR();rec.lang="en-US";rec.interimResults=false;rec.maxAlternatives=1;
-  rec.onresult=function(e){var t=e.results[0][0].transcript,pct=accPct(ctx.target,t);ctx.setListening(false);ctx.setResult(pct,t,false)};
-  rec.onerror=function(){ctx.setListening(false);showMicModal()};
-  rec.onend=function(){ctx.setListening(false)};
-  rec.start()
- }catch(_){ctx.setListening(false);showMicModal()}}
+ if(!SR){ctx.setError("Este navegador no reconoce voz. Abre la app en Chrome o Edge.");return}
+ var rec,got="",err="",silT=null,maxT=null;
+ function fin(){clearTimeout(silT);clearTimeout(maxT)}
+ try{rec=new SR()}catch(_){ctx.setError(micMsg("audio-capture"));return}
+ rec.lang="en-US";rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;
+ rec.__stop=function(){fin();try{rec.stop()}catch(_){}};
+ rec.onresult=function(e){var t="";for(var i=0;i<e.results.length;i++)t+=e.results[i][0].transcript+" ";got=t.trim();if(ctx.setLive)ctx.setLive(got);
+  clearTimeout(silT);silT=setTimeout(function(){rec.__stop()},1800)}; // termina solo tras un silencio corto
+ rec.onerror=function(e){err=e&&e.error||""};
+ rec.onend=function(){fin();MICREC=null;
+  if(got){ctx.setResult(accPct(ctx.target,got),got,false)}else{ctx.setError(micMsg(err))}};
+ MICREC=rec;ctx.setListening(true);
+ maxT=setTimeout(function(){rec.__stop()},15000);
+ try{rec.start()}catch(_){MICREC=null;fin();ctx.setError(micMsg("audio-capture"))}}
 function micFeedback(pct){return pct>=80?["Excellent!","Great pronunciation!","Nice job!"][pct%3]:"Keep practicing."}
-function startMic(s){if(RUN&&s&&s.t=="speak"){if(RUN.mic&&RUN.mic.listening)return;
-  startMicWith({target:s.say,setListening:function(v){RUN.mic={listening:v,pct:null,transcript:null,err:null};drawRun()},setResult:function(pct,t,demo){RUN.mic={listening:false,pct:pct,transcript:t,demo:demo,err:null};RUN.say=micFeedback(pct);if(pct>=80)setTimeout(wolfReact,80);drawRun()}});return}
- if(PRACT&&PRACT.mode=="speaking"){if(PRACT.mic&&PRACT.mic.listening)return;var it=PRACT.pool[PRACT.i];
-  startMicWith({target:it.en,setListening:function(v){PRACT.mic={listening:v,pct:null,transcript:null};drawPractice()},setResult:function(pct,t,demo){PRACT.mic={listening:false,pct:pct,transcript:t,demo:demo};if(pct>=80)setTimeout(wolfReact,80);drawPractice()}})}}
+function startMic(s){if(RUN&&s&&s.t=="speak"){
+  startMicWith({target:s.say,setLive:function(t){if(RUN.mic){RUN.mic.live=t;drawRun()}},setError:function(m){RUN.mic={listening:false,pct:null,transcript:null,err:m};drawRun()},setListening:function(v){RUN.mic={listening:v,pct:null,transcript:null,err:null};drawRun()},setResult:function(pct,t,demo){RUN.mic={listening:false,pct:pct,transcript:t,demo:demo,err:null};RUN.say=micFeedback(pct);if(pct>=80)setTimeout(wolfReact,80);drawRun()}});return}
+ if(PRACT&&PRACT.mode=="speaking"){var it=PRACT.pool[PRACT.i];
+  startMicWith({target:it.en,setLive:function(t){if(PRACT.mic){PRACT.mic.live=t;drawPractice()}},setError:function(m){PRACT.mic={listening:false,pct:null,transcript:null,err:m};drawPractice()},setListening:function(v){PRACT.mic={listening:v,pct:null,transcript:null};drawPractice()},setResult:function(pct,t,demo){PRACT.mic={listening:false,pct:pct,transcript:t,demo:demo};if(pct>=80)setTimeout(wolfReact,80);drawPractice()}})}}
 /* estadoEvoActual(): deriva el estado emocional de Evo ('welcome' |
    'question' | 'success' | 'error') a partir de dónde va el alumno en el
    paso actual -- así Evo reacciona solo, sin que cada pantalla tenga que
@@ -3850,7 +3866,7 @@ function pracListen(it,n){var lv=PRACT.level||"all",tabs='<div class="sug" style
  +(sel!=null?(PRACT.flip?'<p class="es2" style="margin-top:10px"><b>'+esc(it.en)+'</b><br>'+esc(it.es)+'</p>':'<button class="btn ghost" data-a="pflip">Ver transcripción completa</button>'):"")
  +'</div>'+pracNav()}
 function pracSpeak(it,n){var mc=PRACT.mic;var estadoEvo=(mc&&mc.pct!=null)?(mc.pct>=80?"success":"error"):"question";return pracHead(n)+RetoEngine.wolfDialogo("Repite conmigo:",estadoEvo)+'<div class="card rcard" style="border-top:4px solid #B23A6B"><span class="stag" style="background:#B23A6B1a;color:#B23A6B">Speaking</span><h2 class="q" style="margin-top:18px">Di esto en voz alta</h2><div class="bigp">'+esc(it.en)+'</div><p>'+sbtn(it.en)+'</p><p class="es2">'+esc(it.es)+'</p>'
- +'<div class="micwrap"><button class="micbtn'+(mc&&mc.listening?" rec":"")+'" data-a="mic"'+(mc&&mc.listening?" disabled":"")+' aria-label="Grabar tu pronunciación">'+ic("mic",28)+'</button><span class="micl">'+(mc&&mc.listening?"Escuchando… habla ahora":"Toca el micrófono y repite la frase")+'</span></div>'
+ +'<div class="micwrap"><button class="micbtn'+(mc&&mc.listening?" rec":"")+'" data-a="mic"'+""+' aria-label="Grabar tu pronunciación">'+ic("mic",28)+'</button><span class="micl">'+(mc&&mc.listening?"Escuchando… toca de nuevo para terminar":"Toca el micrófono, habla y toca otra vez para terminar")+'</span></div>'+micInfo(mc)
  +(mc&&mc.pct!=null?'<div class="fb '+(mc.pct>=80?"ok":mc.pct>=50?"try":"no")+'"><b>'+(mc.pct>=80?"¡"+mc.pct+"% de precisión! Excelente.":mc.pct+"% de precisión. Sigue practicando.")+'</b><small>Se entendió: “'+esc(mc.transcript)+'”'+(mc.demo?" · modo de prueba":"")+'</small></div>':"")+'</div>'+pracNav()}
 function drawPractice(){var el=$("prac");if(el)el.innerHTML=pracInner()}
 function reviewView(){var t=todayStr(),fromToday=PROG.seen&&PROG.seen.date==t&&PROG.seen.items.length,items=fromToday?PROG.seen.items:shuffle(vocabPool()).slice(0,8);
