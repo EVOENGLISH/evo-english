@@ -2719,8 +2719,10 @@ function ttsProvider(){if(ELEVENLABS_API_KEY)return "elevenlabs";if(OPENAI_API_K
 async function fetchTTSAudio(text){var key=ttsProvider()+":"+(window.__evoVoz||"")+":"+text;if(TTS_CACHE[key])return TTS_CACHE[key];var url=null;
  try{
   if(ttsProvider()=="server"){
-   var tv0=performance.now();var rs=await fetch("/api/voz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text,voice:window.__evoVoz||""})});
-   if(!rs.ok){VOZ_OFF_HASTA=Date.now()+600000;throw new Error("voz_"+rs.status)}
+   var tv0=performance.now();var pedir=function(){return fetch("/api/voz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text,voice:window.__evoVoz||""})})};
+   var rs=await pedir();
+   if(!rs.ok){await new Promise(function(r){setTimeout(r,700)});rs=await pedir()}
+   if(!rs.ok){VOZ_OFF_HASTA=Date.now()+45000;throw new Error("voz_"+rs.status)}
    try{console.log("[EVO voz]",rs.headers.get("X-Voz"),Math.round(performance.now()-tv0)+"ms total")}catch(_){}
    url=URL.createObjectURL(await rs.blob());
   }else if(ttsProvider()=="elevenlabs"){
@@ -2761,7 +2763,10 @@ async function fetchTTSAudio(text){var key=ttsProvider()+":"+(window.__evoVoz||"
  }
  if(url)TTS_CACHE[key]=url;
  return url}
-function playAudioUrl(url,rate){return new Promise(function(res){try{var au=new Audio(url);window.__sayAu=au;try{window.__evoLip&&window.__evoLip(au)}catch(_){};au.playbackRate=rate||1;au.onended=res;au.onerror=res;au.play().catch(res)}catch(_){res()}})}
+var SILENT_WAV="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YQAAAAA=";
+(function(){var listo=false;function un(){if(listo)return;listo=true;try{var a=window.__evoAudio=window.__evoAudio||new Audio();a.src=SILENT_WAV;var p=a.play();if(p&&p.catch)p.catch(function(){listo=false})}catch(e){listo=false}}
+ ["touchend","click","keydown"].forEach(function(ev){document.addEventListener(ev,un,{passive:true})})})();
+function playAudioUrl(url,rate){return new Promise(function(res){try{var au=window.__evoAudio||(window.__evoAudio=new Audio());try{au.pause()}catch(_){}au.onended=null;au.onerror=null;au.src=url;window.__sayAu=au;try{window.__evoLip&&window.__evoLip(au)}catch(_){};au.playbackRate=rate||1;au.onended=res;au.onerror=res;var pp=au.play();if(pp&&pp.catch)pp.catch(res)}catch(_){res()}})}
 var BEST_VOICE=null;
 function pickBestVoice(){var vs=(window.speechSynthesis&&speechSynthesis.getVoices())||[];if(!vs.length)return null;
  var enUS=vs.filter(function(v){return /^en[-_]US/i.test(v.lang)}),enAny=vs.filter(function(v){return /^en/i.test(v.lang)});
@@ -2958,6 +2963,52 @@ function closeMicModal(){var m=$("micmodal");if(m)m.innerHTML=""}
 var MICCTX=null;
 function fallbackMicWith(){if(!MICCTX)return;var pct=82+Math.floor(Math.random()*16);closeMicModal();MICCTX.setResult(pct,MICCTX.target,true)}
 var MICREC=null;
+var EvoRec=(function(){
+ var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+ var hasSR=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
+ function ok(){return !!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder)}
+ function usar(){return ok()&&(isIOS||!hasSR)}
+ function mimePick(){var c=["audio/mp4","audio/webm;codecs=opus","audio/webm","audio/ogg;codecs=opus"];for(var i=0;i<c.length;i++){try{if(MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(c[i]))return c[i]}catch(_){}}return""}
+ var NOHEAR="No te escuché. Acércate al micrófono, habla un poco más fuerte y vuelve a intentar.";
+ function start(o){var ctl={stop:function(){}},stopped=false;
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}).then(function(stream){
+   var mime=mimePick(),rec;
+   try{rec=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream)}catch(e){stream.getTracks().forEach(function(t){t.stop()});o.onError("No pude abrir el micrófono.");return}
+   var chunks=[],spoke=false,lastVoice=0,t0=Date.now(),ac=null,tick=null,alive=false,detect=true;
+   rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data)};
+   function fin(){clearInterval(tick);try{ac&&ac.close()}catch(_){};stream.getTracks().forEach(function(t){t.stop()})}
+   rec.onstop=function(){fin();
+    if((detect&&!spoke)||!chunks.length){o.onError(NOHEAR);return}
+    var blob=new Blob(chunks,{type:rec.mimeType||mime||"audio/mp4"});
+    if(blob.size<1500){o.onError(NOHEAR);return}
+    if(o.onState)o.onState("Procesando tu voz…");
+    var fr=new FileReader();
+    fr.onload=function(){var b64=String(fr.result).split(",")[1]||"";
+     fetch("/api/escuchar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({audio:b64,mime:blob.type,lang:o.lang||"en"})})
+      .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
+      .then(function(j){var t=j&&String(j.text||"").trim();if(t)o.onText(t);else o.onError(NOHEAR)})
+      .catch(function(){o.onError("No pude procesar tu voz. Revisa tu internet e intenta de nuevo.")})};
+    fr.readAsDataURL(blob)};
+   ctl.stop=function(){if(stopped)return;stopped=true;try{if(rec.state!=="inactive")rec.stop()}catch(_){}};
+   try{var AC=window.AudioContext||window.webkitAudioContext;ac=new AC();var src=ac.createMediaStreamSource(stream),an=ac.createAnalyser();an.fftSize=1024;src.connect(an);var buf=new Uint8Array(an.fftSize);
+    tick=setInterval(function(){an.getByteTimeDomainData(buf);var s=0;for(var i=0;i<buf.length;i++){if(buf[i]!==128)alive=true;var v=(buf[i]-128)/128;s+=v*v}
+     var rms=Math.sqrt(s/buf.length),now=Date.now();
+     if(!alive&&now-t0>1500){detect=false;clearInterval(tick);setTimeout(ctl.stop,12000);return} // sin medidor: tú terminas con otro toque (máx. 12 s más)
+     if(rms>0.02){spoke=true;lastVoice=now}
+     if(spoke&&now-lastVoice>1800)ctl.stop();
+     if(now-t0>20000)ctl.stop()},120)
+   }catch(_){detect=false;setTimeout(ctl.stop,12000)}
+   rec.start();if(o.onStart)o.onStart();
+  }).catch(function(e){var n=e&&e.name;o.onError(n==="NotAllowedError"||n==="SecurityError"?"El micrófono está bloqueado. En iPhone: Ajustes → Safari → Micrófono (o el de esta app) → Permitir, y vuelve a intentar.":"No encuentro un micrófono disponible.")});
+  return ctl}
+ return{usar:usar,ok:ok,start:start,isIOS:isIOS}})();
+window.EvoRec=EvoRec;
+function recFlow(ctx){
+ var ctl=EvoRec.start({lang:"en",onStart:function(){},
+  onState:function(t){if(ctx.setLive)ctx.setLive(t)},
+  onText:function(t){MICREC=null;ctx.setResult(accPct(ctx.target,t),t,false)},
+  onError:function(m){MICREC=null;ctx.setError(m)}});
+ MICREC={__stop:function(){ctl.stop()}};ctx.setListening(true)}
 function micInfo(mc){if(!mc)return"";
  if(mc.listening)return '<div class="note" style="margin-top:10px">'+ic("mic",18)+'<span>'+(mc.live?"“"+esc(mc.live)+"”":"Te escucho… di la frase en inglés.")+'</span></div>';
  if(mc.err)return '<div class="fb no" style="margin-top:10px"><b>'+esc(mc.err)+'</b></div>';
@@ -2971,7 +3022,8 @@ function startMicWith(ctx){MICCTX=ctx;
  if(MICREC){try{MICREC.__stop()}catch(_){}return} // segundo toque = terminar
  if(inIframe()){showMicModal();return}
  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!SR){ctx.setError("Este navegador no reconoce voz. Abre la app en Chrome o Edge.");return}
+ if(EvoRec.usar()){recFlow(ctx);return}
+ if(!SR){ctx.setError("Este navegador no puede grabar tu voz. Abre la app en Chrome, Edge o Safari.");return}
  var rec,got="",err="",silT=null,maxT=null;
  function fin(){clearTimeout(silT);clearTimeout(maxT)}
  try{rec=new SR()}catch(_){ctx.setError(micMsg("audio-capture"));return}
@@ -2981,7 +3033,9 @@ function startMicWith(ctx){MICCTX=ctx;
   clearTimeout(silT);silT=setTimeout(function(){rec.__stop()},1800)}; // termina solo tras un silencio corto
  rec.onerror=function(e){err=e&&e.error||""};
  rec.onend=function(){fin();MICREC=null;
-  if(got){ctx.setResult(accPct(ctx.target,got),got,false)}else{ctx.setError(micMsg(err))}};
+  if(got){ctx.setResult(accPct(ctx.target,got),got,false)}
+  else if((err=="service-not-allowed"||err=="network"||err=="language-not-supported")&&EvoRec.ok()){recFlow(ctx)}
+  else{ctx.setError(micMsg(err))}};
  MICREC=rec;ctx.setListening(true);
  maxT=setTimeout(function(){rec.__stop()},15000);
  try{rec.start()}catch(_){MICREC=null;fin();ctx.setError(micMsg("audio-capture"))}}

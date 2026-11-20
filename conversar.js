@@ -312,7 +312,7 @@
  function vistaChat() {
   inyectarCSS();
   var p = pj();
-  var micOk = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  var micOk = !!(window.SpeechRecognition || window.webkitSpeechRecognition || (window.EvoRec && window.EvoRec.ok()));
   setTimeout(montar, 0);
   var w = p.poses ? p.poses.idle : "";
   var lucis = "";
@@ -466,7 +466,8 @@
   LIP.an = null; LIP.sim = true; LIP.t0 = performance.now();
   try {
    if (audio && LIP.ctx && LIP.ctx.state === "running") {
-    var src = LIP.ctx.createMediaElementSource(audio), an = LIP.ctx.createAnalyser();
+    var src = audio.__src || (audio.__src = LIP.ctx.createMediaElementSource(audio)), an = LIP.ctx.createAnalyser();
+    try { src.disconnect(); } catch (e0) {}
     an.fftSize = 512; src.connect(an); an.connect(LIP.ctx.destination);
     LIP.an = an; LIP.buf = new Uint8Array(an.fftSize); LIP.sim = false;
    }
@@ -558,9 +559,30 @@
   else if (els.mic) nota("Toca el micrófono para hablar");
  }
 
-function micToggle() {
+function recToggle() {
+  if (S.recCtl) { S.recCtl.stop(); return; }   // 2.º toque: terminar y enviar
+  try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+  try { if (window.__sayAu) { window.__sayAu.pause(); window.__sayAu = null; } window.__sayTok = (window.__sayTok || 0) + 1; } catch (e) {}
+  function limpiar() {
+   if (els.mic) { els.mic.classList.remove("rec"); els.mic.setAttribute("aria-label", "Toca para hablar"); }
+   if (S.estado === "listen") pose("idle");
+   if (els.live) els.live.textContent = "";
+  }
+  var ctl = window.EvoRec.start({
+   lang: S.lang === "es" ? "es" : "en",
+   onState: function (t) { if (S.recCtl === ctl && els.live) els.live.textContent = t; },
+   onText: function (t) { if (S.recCtl !== ctl) return; S.recCtl = null; limpiar(); enviar(t); nota(""); },
+   onError: function (m) { if (S.recCtl !== ctl) return; S.recCtl = null; limpiar(); nota(m); }
+  });
+  S.recCtl = ctl;
+  if (els.mic) { els.mic.classList.add("rec"); els.mic.setAttribute("aria-label", "Toca para terminar"); }
+  nota("Te escucho… toca otra vez cuando termines"); pose("listen"); if (els.live) els.live.textContent = "";
+ }
+ function micToggle() {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR || S.busy) return;
+  if (S.busy) return;
+  if (window.EvoRec && window.EvoRec.ok() && (window.EvoRec.usar() || !SR)) { recToggle(); return; }
+  if (!SR) { nota("Este navegador no puede grabar tu voz. Abre la app en Chrome o Safari."); return; }
   if (S.rec) { S.manual = true; try { S.rec.stop(); } catch (e) {} return; }   // 2.º toque: terminar y enviar
   try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
   try { if (window.__sayAu) { window.__sayAu.pause(); window.__sayAu = null; } window.__sayTok = (window.__sayTok || 0) + 1; } catch (e) {}
@@ -619,7 +641,7 @@ function micToggle() {
   var a = x.dataset.cv;
   if (a === "pers") { var c = PERSONAJES.filter(function (q) { return q.id === x.dataset.id; })[0]; if (c && c.disponible) { S.char = c.id; if (typeof window.go === "function") window.go(); else window.dispatchEvent(new Event("hashchange")); } }
   else if (a === "start") empezar(x.dataset.tema || "");
-  else if (a === "salir") { try { S.manual = true; if (S.rec) S.rec.stop(); if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (er) {} location.hash = "#/conversar"; }
+  else if (a === "salir") { try { S.manual = true; if (S.rec) S.rec.stop(); var rc = S.recCtl; S.recCtl = null; if (rc) rc.stop(); if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (er) {} location.hash = "#/conversar"; }
   else if (a === "nueva") { empezar(S.tema ? S.tema.id : ""); }
   else if (a === "voz") { S.hablar = !S.hablar; x.classList.toggle("on", S.hablar); x.setAttribute("aria-pressed", S.hablar); if (!S.hablar) { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (er) {} } }
   else if (a === "mic") micToggle();
@@ -636,7 +658,7 @@ function micToggle() {
  window.addEventListener("hashchange", function () {
   if (location.hash !== "#/conversar/chat") {
    var c = document.getElementById("cv-chat"); if (c) c.remove();
-   try { S.manual = true; if (S.rec) S.rec.stop(); } catch (e) {}
+   try { S.manual = true; if (S.rec) S.rec.stop(); var rc2 = S.recCtl; S.recCtl = null; if (rc2) rc2.stop(); } catch (e) {}
   }
  });
 
