@@ -4459,7 +4459,7 @@ var AventuraEngine = (function () {
    anchoTotal = OFFSET_X * 2 + 90,
    altoTotal = pts[pts.length - 1][1] + 90,
    nivel = nivelUsuario(), p = progreso();
-  var nodos = "", separadores = "", decorado = "", mundoAnterior = null, idxMundo = -1, iActual = -1;
+  var nodos = "", separadores = "", decorado = "", mundoAnterior = null, idxMundo = -1, iActual = -1, zIni = [];
   MISIONES.forEach(function (m, i) { if (estadoNodo(i) === "actual" && iActual === -1) iActual = i; });
   MISIONES.forEach(function (m, i) {
    if (m.mundo !== mundoAnterior) {
@@ -4467,6 +4467,7 @@ var AventuraEngine = (function () {
     var deMundo = MUNDOS[idxMundo].misiones,
      hechas = deMundo.filter(function (mm) { return p.completadas[mm.id]; }).length;
     separadores += separadorMundoHTML(m.mundo, idxMundo, pts[i][1], hechas, deMundo.length);
+    zIni.push(pts[i][1] - 168);
     mundoAnterior = m.mundo;
    }
    decorado += decoradoDe(idxMundo, i, pts[i]);
@@ -4479,6 +4480,12 @@ var AventuraEngine = (function () {
   // El sendero pasa por el CENTRO de cada nodo (el nodo se ancla por su borde superior).
   var ptsC = pts.map(function (q) { return [q[0], q[1] + 34]; }), huellas = "";
   for (var hi = 1; hi < ptsC.length; hi++) huellas += huellasEntre(ptsC[hi - 1], ptsC[hi], hi <= trazoLuz);
+  // Fondo vivo por zona: el paisaje de cada zona se extiende detrás del sendero (arriba y espejo abajo).
+  var fondosZona = "";
+  zIni.forEach(function (y0, zi) {
+   var y1 = zi + 1 < zIni.length ? zIni[zi + 1] : altoTotal;
+   fondosZona += '<div class="av-zf" style="top:' + y0 + 'px;height:' + (y1 - y0) + 'px;--img:url(assets/mapa/zona-' + (zi % 10 + 1) + '.jpg)"></div>';
+  });
   var luciernagas = "";
   for (var fi = 0; fi < 18; fi++) luciernagas += '<i style="left:' + ((fi * 37 + 11) % 96 + 2) + '%;top:' + ((fi * 53 + 7) % 94 + 2) + '%;animation-delay:' + ((fi * 0.57) % 6).toFixed(2) + 's;animation-duration:' + (4 + (fi % 4)) + 's"></i>';
   return '<div class="av-wrap av-fullscreen">'
@@ -4491,6 +4498,7 @@ var AventuraEngine = (function () {
    + '<div class="av-prog" aria-hidden="true"><i style="width:' + pctMapa + '%"></i></div>'
    + '<p class="av-progtxt">' + totalHechas + ' / ' + MISIONES.length + ' retos superados · ' + esc(zonaActual) + '</p>'
    + '<div class="av-path" style="height:' + altoTotal + 'px;width:' + anchoTotal + 'px;margin:0 auto;position:relative">'
+   + fondosZona
    + '<svg class="av-line" width="' + anchoTotal + '" height="' + altoTotal + '" viewBox="0 0 ' + anchoTotal + " " + altoTotal + '" aria-hidden="true">'
    + '<path d="' + trazoSVG(ptsC) + '" fill="none" stroke="#3A2412" stroke-opacity=".55" stroke-width="34" stroke-linecap="round"/>'
    + '<path d="' + trazoSVG(ptsC) + '" fill="none" stroke="#9C6B38" stroke-opacity=".85" stroke-width="24" stroke-linecap="round"/>'

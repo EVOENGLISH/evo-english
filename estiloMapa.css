@@ -92,7 +92,7 @@
 /* --- Retos futuros: bloqueados hasta llegar a ellos en orden --- */
 .av-node.bloqueado .av-btn{background:url(assets/mapa/node_locked.png) center/cover,linear-gradient(180deg,#232E44 0%,#161E30 100%);box-shadow:0 5px 0 #0A1220,0 8px 14px rgba(0,0,0,.35);cursor:not-allowed}
 .av-node.bloqueado .av-btn svg{display:none}
-.av-node.bloqueado .av-lbl{color:#A7C2B3}
+.av-node.bloqueado .av-lbl{color:#D6E8DD}
 /* --- Vista previa de admin: el nodo sigue mostrando el candado (sigue
    bloqueado para los alumnos), pero el admin sí puede tocarlo -- un aro
    dorado + etiqueta "Vista previa" avisan que es la excepción de admin,
@@ -118,7 +118,7 @@
 /* --- Medalla de estrella para retos ya completados --- */
 .av-medalla{position:absolute;top:-6px;right:-2px;width:20px;height:20px;background:#0B1F3A;border:2px solid #FFD60A;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .av-medalla svg{width:11px;height:11px;fill:#FFD60A;stroke:none;filter:none}
-.av-lbl{margin-top:8px;font-size:11.5px;color:#E6F6EC;text-align:center;line-height:1.25;max-width:104px;padding:3px 9px;border-radius:12px;background:rgba(6,28,20,.66);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.av-lbl{margin-top:8px;font-size:11.5px;color:#E6F6EC;text-align:center;line-height:1.25;max-width:104px;padding:3px 9px;border-radius:12px;background:rgba(6,24,17,.82);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .av-node.actual .av-lbl{color:#fff;font-weight:700}
 .av-lbl em{display:block;font-style:normal;color:#FFD60A;font-weight:700;margin-top:2px;font-size:10px;letter-spacing:.04em;text-transform:uppercase}
 @media (min-width:640px){.av-node{width:110px}.av-lbl{max-width:120px}}
@@ -176,3 +176,10 @@
 .av-fb{border-radius:14px;padding:14px;margin-top:14px;animation:fbIn .35s ease}
 .av-fb.ok{background:rgba(18,168,80,.2);color:#8FE0B4}
 .av-fb.no{background:rgba(229,72,77,.2);color:#FFC2C4}
+
+/* --- Fondo vivo por zona: el paisaje se extiende a todo lo ancho detrás del sendero --- */
+.av-zf{position:absolute;left:50%;width:1800px;transform:translateX(-50%);z-index:0;pointer-events:none;overflow:hidden}
+.av-zf::before,.av-zf::after{content:"";position:absolute;left:0;right:0;height:min(760px,60%);background:var(--img) center/cover no-repeat;filter:saturate(1.15) brightness(.95);
+ -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 24%,#000 52%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 24%,#000 52%,transparent 100%)}
+.av-zf::before{top:0}
+.av-zf::after{bottom:0;transform:scaleY(-1)}
