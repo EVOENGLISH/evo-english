@@ -2716,10 +2716,10 @@ var TTS_RATE=.9;                        // velocidad recomendada para nivel A1
 var TTS_CACHE={};
 var VOZ_OFF_HASTA=0; // si el servidor de voz falla, usamos la del navegador 10 min
 function ttsProvider(){if(ELEVENLABS_API_KEY)return "elevenlabs";if(OPENAI_API_KEY)return "openai";if(Date.now()>VOZ_OFF_HASTA&&/^https?:/.test(location.protocol))return "server";return "browser"}
-async function fetchTTSAudio(text){var key=ttsProvider()+":"+text;if(TTS_CACHE[key])return TTS_CACHE[key];var url=null;
+async function fetchTTSAudio(text){var key=ttsProvider()+":"+(window.__evoVoz||"")+":"+text;if(TTS_CACHE[key])return TTS_CACHE[key];var url=null;
  try{
   if(ttsProvider()=="server"){
-   var tv0=performance.now();var rs=await fetch("/api/voz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text})});
+   var tv0=performance.now();var rs=await fetch("/api/voz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text,voice:window.__evoVoz||""})});
    if(!rs.ok){VOZ_OFF_HASTA=Date.now()+600000;throw new Error("voz_"+rs.status)}
    try{console.log("[EVO voz]",rs.headers.get("X-Voz"),Math.round(performance.now()-tv0)+"ms total")}catch(_){}
    url=URL.createObjectURL(await rs.blob());

@@ -18,7 +18,9 @@
  var PERSONAJES = [
   { id: "levo", nombre: "LEVO", rol: "Lobo tutor", disponible: true, jaw: true,
     poses: { idle: "assets/mascot/evo_welcome.png", think: "assets/mascot/evo_thinking.png", talk: "assets/mascot/evo_wolf_mentor.png", happy: "assets/mascot/evo_success.png" } },
-  { id: "leva", nombre: "LEVA", rol: "Loba tutora", disponible: false, poses: null }
+  { id: "leva", nombre: "LEVA", rol: "Loba tutora", disponible: true, jaw: true, voz: "Aoede",
+    frames: { closed: "assets/mascot/leva_idle.png", half: "assets/mascot/leva_half.png", open: "assets/mascot/leva_open.png" },
+    poses: { idle: "assets/mascot/leva_idle.png", think: "assets/mascot/leva_thinking.png", talk: "assets/mascot/leva_mentor.png", happy: "assets/mascot/leva_success.png" } }
  ];
 
  var TEMAS = [
@@ -127,6 +129,10 @@
    ".cv-jaw{inset:0;transform:translateY(calc(var(--d,0)*1%));-webkit-mask-image:radial-gradient(ellipse 7.2% 3.4% at 51.1% 38%,#000 60%,transparent 100%);mask-image:radial-gradient(ellipse 7.2% 3.4% at 51.1% 38%,#000 60%,transparent 100%)}",
    ".cv-jaw img{width:100%;height:100%;object-fit:contain;object-position:50% 100%}",
    ".cv-mouth{left:51.1%;top:35%;width:7.4%;height:calc(var(--d,0)*1% + .25%);transform:translateX(-50%);border-radius:0 0 50% 50%/0 0 100% 100%;background:linear-gradient(#1A0407 0,#3A0A14 55%,#8E3345 85%,#B04A5C 100%)}",
+   ".cv-fr{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .2s}",
+   ".cv-fr img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:50% 100%;opacity:0;filter:drop-shadow(0 8px 14px rgba(0,0,0,.45))}",
+   ".cv-fr img.on{opacity:1}",
+   ".cv-stage[data-lip=on] .cv-fr{opacity:1}",
    ".cv-stage[data-lip=on] .cv-jaw,.cv-stage[data-lip=on] .cv-mouth{opacity:1}",
    "@keyframes cv-breath{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.025)}}",
    ".cv-stage[data-estado=talk] .cv-wolf{animation:cv-talk .5s ease-in-out infinite alternate}",
@@ -262,7 +268,7 @@
    + '<div class="cv-fx" aria-hidden="true">' + lucis + hojas + '</div>'
    + '<div class="cv-glow" aria-hidden="true"></div>'
    + '<div class="cv-rings" aria-hidden="true"><i></i><i></i><i></i></div>'
-   + '<div class="cv-wolf" aria-hidden="true"><img class="cv-w on" id="cv-wa" src="' + w + '" alt=""><img class="cv-w" id="cv-wb" src="' + w + '" alt="">' + (p.jaw ? '<i class="cv-mouth" id="cv-mouth"></i><div class="cv-jaw" id="cv-jaw"><img src="' + w + '" alt=""></div>' : '') + '</div>'
+   + '<div class="cv-wolf" aria-hidden="true"><img class="cv-w on" id="cv-wa" src="' + w + '" alt=""><img class="cv-w" id="cv-wb" src="' + w + '" alt="">' + (p.frames ? '<div class="cv-fr" id="cv-fr"><img class="on" data-f="closed" src="' + p.frames.closed + '" alt=""><img data-f="half" src="' + p.frames.half + '" alt=""><img data-f="open" src="' + p.frames.open + '" alt=""></div>' : p.jaw ? '<i class="cv-mouth" id="cv-mouth"></i><div class="cv-jaw" id="cv-jaw"><img src="' + w + '" alt=""></div>' : '') + '</div>'
    + '<div class="cv-bar">'
    + '<button type="button" class="cv-btn" data-cv="salir" aria-label="Salir de la conversación">' + IC.back + '</button>'
    + '<div class="cv-who"><b>' + esc(p.nombre) + '</b><small id="cv-sub">' + (S.tema ? esc(S.tema.n) : "Habla de lo que quieras") + '</small></div>'
@@ -377,8 +383,8 @@
   } catch (e) {}
  }
  function lipFrame() {
-  var jaw = document.getElementById("cv-jaw"), mo = document.getElementById("cv-mouth"), st = els.stage;
-  if (!jaw || !st) { LIP.raf = 0; return; }
+  var jaw = document.getElementById("cv-jaw"), mo = document.getElementById("cv-mouth"), fr = document.getElementById("cv-fr"), st = els.stage;
+  if ((!jaw && !fr) || !st) { LIP.raf = 0; return; }
   var target = 0, t = performance.now() - LIP.t0;
   if (LIP.an) {
    LIP.an.getByteTimeDomainData(LIP.buf);
@@ -390,7 +396,10 @@
   }
   LIP.d += (target - LIP.d) * (target > LIP.d ? 0.55 : 0.3);
   var d = LIP.d < 0.04 ? 0 : LIP.d;
-  jaw.style.setProperty("--d", d.toFixed(3)); if (mo) mo.style.setProperty("--d", d.toFixed(3));
+  if (fr) {
+   var f = d < 0.35 ? "closed" : d < 1.0 ? "half" : "open";
+   if (f !== LIP.f) { LIP.f = f; var im = fr.children; for (var k = 0; k < im.length; k++) im[k].classList.toggle("on", im[k].getAttribute("data-f") === f); }
+  } else { jaw.style.setProperty("--d", d.toFixed(3)); if (mo) mo.style.setProperty("--d", d.toFixed(3)); }
   LIP.raf = requestAnimationFrame(lipFrame);
  }
  function lipStart(audio) {
@@ -413,8 +422,9 @@
    LIP.sim = false; LIP.an = null; LIP.d = 0;
    if (LIP.raf) { cancelAnimationFrame(LIP.raf); LIP.raf = 0; }
    if (els.stage) els.stage.removeAttribute("data-lip");
-   var jaw = document.getElementById("cv-jaw"), mo = document.getElementById("cv-mouth");
+   var jaw = document.getElementById("cv-jaw"), mo = document.getElementById("cv-mouth"), fr = document.getElementById("cv-fr");
    if (jaw) jaw.style.setProperty("--d", "0"); if (mo) mo.style.setProperty("--d", "0");
+   LIP.f = "closed"; if (fr) for (var k = 0; k < fr.children.length; k++) fr.children[k].classList.toggle("on", fr.children[k].getAttribute("data-f") === "closed");
    if (S.estado === "talk") pose("idle");
   }, 380);
  }
@@ -427,6 +437,7 @@
  };
 
  function hablar(texto) {
+  window.__evoVoz = pj().voz || "";
   var clean = String(texto).replace(/\([^)]*\)/g, "").trim();   // sin la ayuda entre paréntesis
   if (!clean) return;
   lipCtx(); LIP.fired = false;
