@@ -1,6 +1,7 @@
 // EVO ENGLISH · voz natural para LEVO (proxy seguro, las llaves viven en Vercel)
 // Orden: ElevenLabs (si pones ELEVENLABS_API_KEY) -> Gemini TTS (usa tu GEMINI_API_KEY) -> Groq Orpheus (usa GROQ_API_KEY)
 // Si todo falla responde 503 y la app usa la voz del navegador, el alumno nunca ve un error.
+const VOCES = ["Zephyr","Puck","Charon","Kore","Fenrir","Leda","Orus","Aoede","Callirrhoe","Autonoe","Enceladus","Iapetus","Umbriel","Algieba","Despina","Erinome","Algenib","Rasalgethi","Laomedeia","Achernar","Alnilam","Schedar","Gacrux","Pulcherrima","Achird","Zubenelgenubi","Vindemiatrix","Sadachbia","Sadaltager","Sulafat"];
 const cache = new Map();
 const hits = new Map();
 const MAX = 300;
@@ -54,10 +55,10 @@ async function elevenlabs(texto) {
 
 let ruta = ""; // recuerda cuál endpoint de Gemini funcionó
 let modeloOk = ""; // y cuál modelo
-async function gemini(texto) {
+async function gemini(texto, vozPedida) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
-  const voz = process.env.GEMINI_VOICE || "Kore";
+  const voz = vozPedida || process.env.GEMINI_VOICE || "Kore";
   const modelos = [process.env.GEMINI_TTS_MODEL, "gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview"].filter(Boolean);
   if (modeloOk) modelos.unshift(modeloOk);
   for (const m of modelos) {
@@ -123,22 +124,24 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   const ip = String(req.headers["x-forwarded-for"] || "x").split(",")[0].trim();
   if (limite(ip)) return res.status(429).json({ error: "limite" });
-  let texto = "";
+  let texto = "", vozP = "";
   try {
     const b = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     texto = String(b.text || "").replace(/\s+/g, " ").trim().slice(0, MAX);
+    vozP = VOCES.includes(b.voice) ? b.voice : "";
   } catch (e) {}
   if (!texto) return res.status(400).json({ error: "vacio" });
-  let r = cache.get(texto);
+  const ck = vozP + "|" + texto;
+  let r = cache.get(ck);
   const t0 = Date.now();
   if (!r) {
     for (const f of [elevenlabs, gemini, groq]) {
-      try { r = await f(texto); } catch (e) { r = null; }
+      try { r = await f(texto, vozP); } catch (e) { r = null; }
       if (r) { r.prov = f.name; break; }
     }
     if (r) {
       if (cache.size > 200) cache.delete(cache.keys().next().value);
-      cache.set(texto, r);
+      cache.set(ck, r);
     }
   }
   if (!r) return res.status(503).json({ error: "sin_voz" });
