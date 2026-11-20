@@ -177,9 +177,8 @@
 .av-fb.ok{background:rgba(18,168,80,.2);color:#8FE0B4}
 .av-fb.no{background:rgba(229,72,77,.2);color:#FFC2C4}
 
-/* --- Fondo vivo por zona: paisaje nítido arriba + versión difuminada que llena toda la zona --- */
-.av-zf{position:absolute;left:50%;width:1800px;transform:translateX(-50%);z-index:0;pointer-events:none;overflow:hidden;
- -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 7%,#000 93%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 7%,#000 93%,transparent 100%)}
-.av-zf::after{content:"";position:absolute;inset:-60px;background:var(--img) center/cover no-repeat;filter:blur(34px) saturate(1.25) brightness(.62)}
-.av-zf::before{content:"";position:absolute;z-index:1;left:0;right:0;top:0;height:min(760px,60%);background:var(--img) center/cover no-repeat;filter:saturate(1.15) brightness(.95);
- -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 24%,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 24%,#000 55%,transparent 100%)}
+/* --- Fondo vivo por zona: la foto de la zona se repite nítida (con fundido) por todo el recorrido --- */
+.av-zf{position:absolute;left:50%;width:1800px;transform:translateX(-50%);z-index:0;pointer-events:none;overflow:hidden;background:#0B2118;
+ -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 5%,#000 95%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 5%,#000 95%,transparent 100%)}
+.av-zt{position:absolute;left:0;right:0;height:900px;background:var(--img) center/cover no-repeat;filter:saturate(1.15) brightness(.82);
+ -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 24%,#000 76%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 24%,#000 76%,transparent 100%)}

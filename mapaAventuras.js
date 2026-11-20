@@ -4411,7 +4411,7 @@ var AventuraEngine = (function () {
   var clickable = st === "hecho" || st === "actual" || previaAdmin, tag = clickable ? "button" : "div";
   var extra = clickable ? ' data-a="av-abrir" data-mid="' + esc(m.id) + '"' : "";
   var enCurso = st === "actual" && estaEnProgreso(m.id), dominada = st === "hecho" && estaDominada(m.id);
-  var iconoHTML = m.tipo === "desafio" ? '<img class="av-chest" src="assets/mapa/cofre.png" alt="" width="84" height="84" loading="lazy">' : st === "actual" ? '<img src="assets/mascot/lobito-feliz.png" alt="" width="52" height="52" style="width:52px;height:52px;object-fit:contain;pointer-events:none">' : (st === "bloqueado" ? ic("lock", 22) : ic(tipo.icono, 26));
+  var iconoHTML = m.tipo === "desafio" ? '<img class="av-chest" src="assets/mapa/cofre.png" alt="" width="84" height="84" loading="lazy">' : st === "actual" ? '<img src="'+(window.EVO_LOBITO||'assets/mascot/lobito-feliz.png')+'" alt="" width="52" height="52" style="width:52px;height:52px;object-fit:contain;pointer-events:none">' : (st === "bloqueado" ? ic("lock", 22) : ic(tipo.icono, 26));
   var etiquetaAhora = enCurso ? "Continúa aquí" : "Ahora";
   var etiquetaAria = previaAdmin ? esc(m.titulo) + " (bloqueado para alumnos, vista previa de admin)" : esc(m.titulo);
   return '<div class="av-node ' + st + " tipo-" + m.tipo + (dominada ? " dominada" : "") + (previaAdmin ? " av-prevadmin" : "") + '" style="left:' + left + 'px;top:' + top + 'px">'
@@ -4480,11 +4480,12 @@ var AventuraEngine = (function () {
   // El sendero pasa por el CENTRO de cada nodo (el nodo se ancla por su borde superior).
   var ptsC = pts.map(function (q) { return [q[0], q[1] + 34]; }), huellas = "";
   for (var hi = 1; hi < ptsC.length; hi++) huellas += huellasEntre(ptsC[hi - 1], ptsC[hi], hi <= trazoLuz);
-  // Fondo vivo por zona: el paisaje de cada zona se extiende detrás del sendero (arriba y espejo abajo).
+  // Fondo vivo por zona: la misma foto de la zona se repite nítida, con fundido suave, a lo largo de todo el recorrido.
   var fondosZona = "";
   zIni.forEach(function (y0, zi) {
-   var y1 = zi + 1 < zIni.length ? zIni[zi + 1] : altoTotal;
-   fondosZona += '<div class="av-zf" style="top:' + y0 + 'px;height:' + (y1 - y0) + 'px;--img:url(assets/mapa/zona-' + (zi % 10 + 1) + '.jpg)"></div>';
+   var y1 = zi + 1 < zIni.length ? zIni[zi + 1] : altoTotal, h = y1 - y0, tiles = "";
+   for (var ti = 0; ti * 640 < h; ti++) tiles += '<i class="av-zt" style="top:' + (ti * 640) + 'px"></i>';
+   fondosZona += '<div class="av-zf" style="top:' + y0 + 'px;height:' + h + 'px;--img:url(assets/mapa/zona-' + (zi % 10 + 1) + '.jpg)">' + tiles + '</div>';
   });
   var luciernagas = "";
   for (var fi = 0; fi < 18; fi++) luciernagas += '<i style="left:' + ((fi * 37 + 11) % 96 + 2) + '%;top:' + ((fi * 53 + 7) % 94 + 2) + '%;animation-delay:' + ((fi * 0.57) % 6).toFixed(2) + 's;animation-duration:' + (4 + (fi % 4)) + 's"></i>';
