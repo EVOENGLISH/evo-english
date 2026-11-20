@@ -16,7 +16,7 @@
  var MAX_DIA = 150;        // mensajes por día por dispositivo (límite suave)
 
  var PERSONAJES = [
-  { id: "levo", nombre: "LEVO", rol: "Lobo tutor", disponible: true, jaw: true,
+  { id: "levo", nombre: "LEVO", rol: "Lobo tutor", disponible: true, jaw: true, voz: "Charon",
     poses: { idle: "assets/mascot/evo_welcome.png", think: "assets/mascot/evo_thinking.png", talk: "assets/mascot/evo_wolf_mentor.png", happy: "assets/mascot/evo_success.png" } },
   { id: "leva", nombre: "LEVA", rol: "Loba tutora", disponible: true, jaw: true, voz: "Aoede",
     frames: { closed: "assets/mascot/leva_idle.png", half: "assets/mascot/leva_half.png", open: "assets/mascot/leva_open.png" },
@@ -41,6 +41,17 @@
  /* ---------- utilidades ---------- */
  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
  function pj() { return PERSONAJES.filter(function (p) { return p.id === S.char; })[0] || PERSONAJES[0]; }
+ // Guía elegido por el alumno (se guarda por usuario). Lo leen guias.js y las pantallas de práctica.
+ function claveGuia() { try { var u = window.LoginOnboarding && window.LoginOnboarding.usuarioActual && window.LoginOnboarding.usuarioActual(); return "evoGuia:" + (u && u.usuario || "anon"); } catch (e) { return "evoGuia:anon"; } }
+ window.EvoGuia = {
+  get: function () { try { return localStorage.getItem(claveGuia()) || ""; } catch (e) { return ""; } },
+  set: function (id) { try { localStorage.setItem(claveGuia(), id); } catch (e) {} S.char = id; S.charTouched = false; }
+ };
+ function guiaInit() {
+  if (S.charTouched) return;
+  var g = window.EvoGuia.get();
+  if (g && PERSONAJES.some(function (p) { return p.id === g && p.disponible; })) S.char = g;
+ }
  function nombreAlumno() {
   try { var u = window.LoginOnboarding && window.LoginOnboarding.usuarioActual && window.LoginOnboarding.usuarioActual(); return u && u.nombre ? String(u.nombre).split(" ")[0] : ""; } catch (e) { return ""; }
  }
@@ -279,9 +290,12 @@
  }
 
  function vistaHub() {
-  inyectarCSS();
+  inyectarCSS(); guiaInit();
   var lv = PERSONAJES[0], la = PERSONAJES[1];
+  var gid = window.EvoGuia.get(), gp = PERSONAJES.filter(function (p) { return p.id === gid; })[0];
+  var chipGuia = gp ? '<button type="button" class="hub-guia" data-guia="cambiar"><img src="' + gp.poses.idle + '" alt=""><span>Tu guía: ' + esc(gp.nombre) + '<small>Toca para cambiar de guía</small></span><em>Cambiar</em></button>' : '';
   return '<div class="hero"><div><h1>Habla</h1><p class="sub">Construye tu fluidez conversando de verdad</p></div></div>'
+   + chipGuia
    + '<div class="hub-stage"><img class="l" src="' + lv.poses.idle + '" alt=""><img class="v" src="' + la.poses.idle + '" alt=""><p>LEVO y LEVA te esperan para conversar</p></div>'
    + '<button type="button" class="hub-big free" data-href="#/conversar"><span class="ico">' + IC.mic + '</span><span><b>Práctica libre</b><small>Habla de lo que quieras con LEVO o LEVA. Ellos te corrigen y te ayudan a decirlo mejor.</small></span></button>'
    + '<button type="button" class="hub-big guided" aria-disabled="true" data-t="La práctica guiada llega muy pronto"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h12a4 4 0 0 1 4 4v10H8a4 4 0 0 1-4-4V5zM8 9h8M8 13h5"/></svg></span><span><b>Práctica guiada<span class="hub-tag">PRONTO</span></b><small>Lecciones habladas paso a paso, de A1 a C2, como con un profesor nativo.</small></span></button>';
@@ -296,7 +310,7 @@
  }
 
  function vistaInicio() {
-  inyectarCSS();
+  inyectarCSS(); guiaInit();
   var p = pj();
   var pers = PERSONAJES.map(function (c) {
    var img = c.poses ? '<img src="' + c.poses.idle + '" alt="" width="64" height="64">' : '<div class="ph" aria-hidden="true">' + esc(c.nombre.charAt(0)) + '</div>';
@@ -310,7 +324,7 @@
  }
 
  function vistaChat() {
-  inyectarCSS();
+  inyectarCSS(); guiaInit();
   var p = pj();
   var micOk = !!(window.SpeechRecognition || window.webkitSpeechRecognition || (window.EvoRec && window.EvoRec.ok()));
   setTimeout(montar, 0);
@@ -639,7 +653,7 @@ function recToggle() {
   if (!x) return;
   lipCtx();
   var a = x.dataset.cv;
-  if (a === "pers") { var c = PERSONAJES.filter(function (q) { return q.id === x.dataset.id; })[0]; if (c && c.disponible) { S.char = c.id; if (typeof window.go === "function") window.go(); else window.dispatchEvent(new Event("hashchange")); } }
+  if (a === "pers") { var c = PERSONAJES.filter(function (q) { return q.id === x.dataset.id; })[0]; if (c && c.disponible) { S.char = c.id; S.charTouched = true; if (typeof window.go === "function") window.go(); else window.dispatchEvent(new Event("hashchange")); } }
   else if (a === "start") empezar(x.dataset.tema || "");
   else if (a === "salir") { try { S.manual = true; if (S.rec) S.rec.stop(); var rc = S.recCtl; S.recCtl = null; if (rc) rc.stop(); if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (er) {} location.hash = "#/conversar"; }
   else if (a === "nueva") { empezar(S.tema ? S.tema.id : ""); }
@@ -662,5 +676,5 @@ function recToggle() {
   }
  });
 
- window.ConversarEngine = { vista: vista, cta: cta, banner: banner };
+ window.ConversarEngine = { vista: vista, cta: cta, banner: banner, personajes: function () { return PERSONAJES; } };
 })();
