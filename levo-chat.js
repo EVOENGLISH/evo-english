@@ -118,14 +118,34 @@
   return d;
  }
 
+ // El chat flotante sigue al guía elegido (LEVO o LEVA): imagen, nombre y personalidad.
+ function guiaAct() {
+  try {
+   var id = window.EvoGuia && window.EvoGuia.get(), ps = window.ConversarEngine && window.ConversarEngine.personajes();
+   var p = ps && ps.filter(function (q) { return q.id === id; })[0];
+   if (p) return { nombre: p.nombre, img: p.poses.talk, fem: p.id === "leva" };
+  } catch (e) {}
+  return { nombre: "LEVO", img: "assets/mascot/evo_wolf_mentor.png", fem: false };
+ }
+ function aplicarGuia() {
+  var g = guiaAct();
+  try {
+   els.fab.querySelector("img").src = g.img; els.fab.setAttribute("aria-label", "Hablar con " + g.nombre);
+   var hi = els.panel.querySelector(".levo-head img"); if (hi) hi.src = g.img;
+   var hb = els.panel.querySelector(".levo-head b"); if (hb) hb.textContent = g.nombre;
+   els.panel.setAttribute("aria-label", "Chat con " + g.nombre);
+  } catch (e) {}
+  return g;
+ }
  function alternar(abrir) {
   estado.abierto = abrir;
   els.panel.classList.toggle("open", abrir);
   els.fab.style.display = abrir ? "none" : "";
   if (abrir) {
+   var g = aplicarGuia();
    if (!els.msgs.childNodes.length) {
     var n = nombreAlumno();
-    burbuja("Hi" + (n ? ", " + n : "") + "! I'm LEVO. Let's practice English together. How are you today?\n(¡Hola! Soy LEVO. Practiquemos inglés juntos.)", "bot");
+    burbuja("Hi" + (n ? ", " + n : "") + "! I'm " + g.nombre + ". Let's practice English together. How are you today?\n(¡Hola! Soy " + g.nombre + ". Practiquemos inglés juntos.)", "bot");
    }
    setTimeout(function () { els.input.focus(); }, 50);
   }
@@ -230,7 +250,7 @@
 
   var contexto = estado.historial.slice(-MAX_TURNOS);
   var cuerpo = JSON.stringify({
-   systemInstruction: { parts: [{ text: SISTEMA }] },
+   systemInstruction: { parts: [{ text: SISTEMA.replace("You are LEVO,", "You are " + guiaAct().nombre + (guiaAct().fem ? " (a female wolf)," : ",")) }] },
    contents: contexto,
    generationConfig: { maxOutputTokens: 800, temperature: 0.7 }
   });

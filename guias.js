@@ -39,7 +39,25 @@
  function guardar(k, v) { try { localStorage.setItem(clave(k), v); } catch (e) {} }
  function hoy() { return new Date().toDateString(); }
  function guia() { var g = window.EvoGuia ? window.EvoGuia.get() : ""; return pjDe(g) ? g : ""; }
- function aplicarVoz() { var p = pjDe(guia()); if (p) window.__evoVoz = p.voz || ""; }
+ function aplicarVoz() {
+  var p = pjDe(guia()); if (!p) return;
+  window.__evoVoz = p.voz || "";
+  // La mascota de lecciones, retos, Speaking y resultados usa las poses del guía elegido.
+  try {
+   if (window.ASSETS && ASSETS.wolfEstados && ASSETS.__guia !== p.id) {
+    var r = 900 / 672, po = p.poses;
+    if (!ASSETS.__orig) ASSETS.__orig = { wolf: ASSETS.wolf, v: ASSETS.wolfVariantes.slice(), e: JSON.parse(JSON.stringify(ASSETS.wolfEstados)) };
+    if (p.id === "levo") { ASSETS.wolf = ASSETS.__orig.wolf; ASSETS.wolfVariantes.splice(0, ASSETS.wolfVariantes.length); ASSETS.__orig.v.forEach(function (x) { ASSETS.wolfVariantes.push(x); }); ASSETS.wolfEstados.welcome = ASSETS.__orig.e.welcome; ASSETS.wolfEstados.question = ASSETS.__orig.e.question; ASSETS.wolfEstados.success = ASSETS.__orig.e.success; ASSETS.wolfEstados.error = ASSETS.__orig.e.error; }
+    else {
+     ASSETS.wolf = po.talk;
+     ASSETS.wolfVariantes.splice(0, ASSETS.wolfVariantes.length, { src: po.talk, ratio: r }, { src: po.idle, ratio: r });
+     ASSETS.wolfEstados.welcome = { src: po.idle, ratio: r }; ASSETS.wolfEstados.question = { src: po.think, ratio: r };
+     ASSETS.wolfEstados.success = { src: po.happy, ratio: r }; ASSETS.wolfEstados.error = { src: po.think, ratio: r };
+    }
+    ASSETS.__guia = p.id;
+   }
+  } catch (e) {}
+ }
 
  var CSS = ''
   + '.gd-ov{position:fixed;inset:0;z-index:99990;display:flex;flex-direction:column;align-items:center;color:#fff;font-family:"DM Sans",system-ui,Arial,sans-serif;overflow:hidden;'
