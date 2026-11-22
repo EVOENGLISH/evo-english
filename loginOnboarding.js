@@ -295,6 +295,19 @@ var LoginOnboarding = (function () {
    return;
   }
   if (!u.onboardingCompleto) { pintarPaso1(key, u, cont); return; }
+  if (u.edad && u.edad < 18) {
+   var yaLocal = false; try { yaLocal = localStorage.getItem("evoConsent:" + key) === "1"; } catch (_) {}
+   if (!yaLocal) {
+    StudentRepository.tieneConsentimiento(key).then(function (tiene) {
+     if (tiene === false) { datos = { key: key, nombre: u.nombre, edad: u.edad }; pintarConsentimiento(cont, function () { entrarComo(key, u, cont); }); }
+     else { if (tiene) { try { localStorage.setItem("evoConsent:" + key, "1"); } catch (_) {} } continuarEntrada(key, u, cont); }
+    });
+    return;
+   }
+  }
+  continuarEntrada(key, u, cont);
+ }
+ function continuarEntrada(key, u, cont) {
   quitarOverlay();
   window.cargarProgParaUsuario(key);
   if (typeof window.mezclarPerfilGamificacionNube === "function") window.mezclarPerfilGamificacionNube(key);
@@ -347,7 +360,44 @@ var LoginOnboarding = (function () {
    var edad = parseInt(document.getElementById("ob-edad").value, 10);
    if (!edad || edad < 3 || edad > 99) { document.getElementById("ob-err2").hidden = false; return; }
    datos.edad = edad;
-   pintarPaso3(cont);
+   if (edad < 18) pintarConsentimiento(cont, function () { pintarPaso3(cont); }); else pintarPaso3(cont);
+  });
+ }
+
+ // Pantalla de consentimiento: solo para menores de 18. Un adulto
+ // (mamá, papá o tutor) escribe su nombre, elige el parentesco y marca
+ // la casilla. Se guarda en Supabase con fecha. Hasta que lo haga el
+ // alumno no avanza.
+ function pintarConsentimiento(cont, siguiente, soloConsentimiento) {
+  var u = datos.nombre || "tu hijo/a";
+  contenedor().innerHTML = '<div class="auth-card ob-card">'
+   + '<div class="auth-mascota">' + rostroLevo(64) + '<div class="auth-globo">Necesito el permiso de un adulto</div></div>'
+   + '<p style="color:#EAF2FF;font-size:15px;line-height:1.5;margin:8px 0 12px">Antes de seguir, <b>pásale el teléfono a tu mamá, papá o tutor</b> para que lea y autorice.</p>'
+   + '<div style="background:rgba(255,255,255,.07);border-radius:14px;padding:12px 14px;color:#C9D8F2;font-size:13.5px;line-height:1.5;margin-bottom:12px">'
+   + 'EVO ENGLISH guarda el nombre, la edad, el progreso y los avances de ' + esc(u) + '. Para las prácticas de conversación, lo que se escribe o se dice se envía a servicios de inteligencia artificial para generar la respuesta. '
+   + 'No pedimos ni guardamos teléfonos, direcciones ni fotos del alumno, y no vendemos datos. Puede pedir que se borre la cuenta cuando quiera. '
+   + 'Más detalle en la <a href="privacidad.html" target="_blank" style="color:#7FB2FF">política de privacidad</a> y los <a href="terminos.html" target="_blank" style="color:#7FB2FF">términos</a>.'
+   + '</div>'
+   + '<form id="ob-cons" novalidate>'
+   + '<input class="auth-input" id="ob-tutor" type="text" placeholder="Nombre completo del adulto" autocomplete="off">'
+   + '<select class="auth-input" id="ob-parent" style="margin-top:10px"><option value="">Parentesco</option><option>Mamá</option><option>Papá</option><option>Tutor/a legal</option><option>Otro familiar a cargo</option></select>'
+   + '<label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;color:#EAF2FF;font-size:14px;line-height:1.45;cursor:pointer">'
+   + '<input type="checkbox" id="ob-ok" style="width:22px;height:22px;flex:none;margin-top:1px"><span>Soy mayor de edad, soy el adulto responsable de ' + esc(u) + ' y <b>autorizo</b> que use EVO ENGLISH.</span></label>'
+   + '<p class="auth-err" id="ob-errc" hidden></p>'
+   + '<button type="submit" class="auth-btn3d">Autorizar y continuar</button>'
+   + '</form></div>';
+  document.getElementById("ob-cons").addEventListener("submit", async function (ev) {
+   ev.preventDefault();
+   var nom = document.getElementById("ob-tutor").value.trim(), par = document.getElementById("ob-parent").value, ok = document.getElementById("ob-ok").checked;
+   var err = document.getElementById("ob-errc");
+   if (nom.length < 5 || nom.indexOf(" ") < 0) { err.textContent = "Escribe el nombre completo del adulto."; err.hidden = false; return; }
+   if (!par) { err.textContent = "Elige el parentesco."; err.hidden = false; return; }
+   if (!ok) { err.textContent = "El adulto debe marcar la casilla para continuar."; err.hidden = false; return; }
+   var b = ev.target.querySelector("button"); b.disabled = true; b.textContent = "Guardando…";
+   var guardado = await StudentRepository.registrarConsentimiento(datos.key, datos.edad, nom, par);
+   if (!guardado) { b.disabled = false; b.textContent = "Autorizar y continuar"; err.textContent = "No se pudo guardar. Revisa tu internet e inténtalo de nuevo."; err.hidden = false; return; }
+   try { localStorage.setItem("evoConsent:" + datos.key, "1"); } catch (_) {}
+   siguiente();
   });
  }
 

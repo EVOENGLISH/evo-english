@@ -271,6 +271,18 @@ var StudentRepository = (function () {
   return r.data;
  }
 
+ // Consentimiento de padres/tutores (menores de 18). Se guarda quién
+ // autorizó, su parentesco y cuándo, en la tabla consentimientos_tutor.
+ async function registrarConsentimiento(usuario, edad, tutorNombre, parentesco) {
+  var r = await rpc("registrar_consentimiento", { p_usuario: usuario, p_edad: edad, p_tutor_nombre: tutorNombre, p_parentesco: parentesco || null, p_version: "v1" });
+  return !!(r.ok && r.data === true);
+ }
+ // Devuelve true / false, o null si no se pudo consultar (sin red).
+ async function tieneConsentimiento(usuario) {
+  var r = await rpc("tiene_consentimiento", { p_usuario: usuario });
+  return r.ok ? r.data === true : null;
+ }
+
  // Progreso (nivel, xp, racha, insignia nueva) — se llama en segundo plano
  // desde savep() en index.html. NO muestra avisos visibles en cada error:
  // sería molesto interrumpir al alumno mientras estudia por un problema
@@ -336,6 +348,8 @@ var StudentRepository = (function () {
   adminToggleActive: adminToggleActive,
   adminDeleteStudent: adminDeleteStudent,
   completeOnboarding: completeOnboarding,
+  registrarConsentimiento: registrarConsentimiento,
+  tieneConsentimiento: tieneConsentimiento,
   updateProgress: updateProgress,
   obtenerPerfilGamificacion: obtenerPerfilGamificacion,
   obtenerClasificacion: obtenerClasificacion,
