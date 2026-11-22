@@ -9,7 +9,7 @@
    (ver supabaseRepo.js); este archivo nunca llama a Supabase directamente.
 
    ROLES:
-     - "admin": cuenta fija (admin/evo123), NO vive en la nube -- es la
+     - "admin": cuenta fija (usuario admin; su contraseña vive solo en Supabase), NO vive en la nube -- es la
        llave maestra de la escuela y debe seguir funcionando aunque
        Supabase esté caído. Ver ADMIN_FIJO abajo.
      - "alumno": vive en la tabla "alumnos" de Supabase (StudentRepository)
@@ -62,7 +62,12 @@ var LoginOnboarding = (function () {
   * --------------------------------------------------------------------- */
  // Cuenta de administrador: fija a propósito (no vive en Supabase) para
  // que la escuela SIEMPRE pueda entrar al Panel, incluso sin internet.
- var ADMIN_FIJO = { nombre: "Administrador", password: "evo123", rol: "admin", activo: true };
+ var ADMIN_FIJO = { nombre: "Administrador", rol: "admin", activo: true };
+ // La contraseña de admin YA NO está en el código: vive solo en Supabase.
+ // Se escribe al entrar y se guarda únicamente en esta pestaña (sessionStorage).
+ var CLAVE_ADMIN_PW = "evo-admin-pw";
+ function adminPass() { try { return sessionStorage.getItem(CLAVE_ADMIN_PW) || ""; } catch (_) { return ""; } }
+ function guardarAdminPass(p) { try { sessionStorage.setItem(CLAVE_ADMIN_PW, p); } catch (_) {} }
  var CLAVE_SESION = "evo-sesion";
  var CLAVE_CONFIG = "evo-config";
  var METAS_MIN = [5, 10, 15, 20];
@@ -108,13 +113,13 @@ var LoginOnboarding = (function () {
   * 4) API DE ALUMNOS para el Panel de Control — toda pasa por
   *    StudentRepository (Supabase), nunca por localStorage directo.
   *    Desde el blindaje con RLS+RPC, cada acción de administración exige
-  *    la contraseña de admin (ADMIN_FIJO.password) como credencial ante
+  *    la contraseña de admin (adminPass()) como credencial ante
   *    Supabase -- estas funciones la agregan automáticamente, así que
   *    panelAdmin.js sigue llamando a estos métodos exactamente igual que
   *    antes, sin saber nada de contraseñas ni de Supabase.
   * --------------------------------------------------------------------- */
  async function listarAlumnos() {
-  var filas = await StudentRepository.adminListStudents(ADMIN_FIJO.password);
+  var filas = await StudentRepository.adminListStudents(adminPass());
   return filas.map(function (f) {
    // "racha" = días consecutivos activos (viene de la tabla "alumnos" en
    // Supabase, columna "racha", ya actualizada en vivo por
@@ -125,10 +130,10 @@ var LoginOnboarding = (function () {
  }
 
  async function alumnosNuevos() {
-  return StudentRepository.adminNewStudentsStats(ADMIN_FIJO.password);
+  return StudentRepository.adminNewStudentsStats(adminPass());
  }
  async function alumnosNuevosLista(periodo) {
-  return StudentRepository.adminNewStudentsList(ADMIN_FIJO.password, periodo);
+  return StudentRepository.adminNewStudentsList(adminPass(), periodo);
  }
 
  async function registrarAlumno(nombre, usuario, password) {
@@ -139,7 +144,7 @@ var LoginOnboarding = (function () {
   // dentro de la misma función SQL (una sola consulta atómica en el
   // servidor), así que no hay ventana de tiempo entre "revisar" y
   // "guardar" en la que dos registros simultáneos pudieran chocar.
-  var res = await StudentRepository.adminRegisterStudent(ADMIN_FIJO.password, key, nombre, password);
+  var res = await StudentRepository.adminRegisterStudent(adminPass(), key, nombre, password);
   if (!res || !res.ok) {
    // "errorDeRed" viaja tal cual desde supabaseRepo.js -- ver el comentario
    // ahí: le dice a panelAdmin.js si vale la pena revisar la lista fresca
@@ -152,17 +157,17 @@ var LoginOnboarding = (function () {
  async function cambiarPassword(usuario, nuevaPassword) {
   var key = normUser(usuario);
   if (!(nuevaPassword || "").trim()) return { ok: false };
-  var res = await StudentRepository.adminChangePassword(ADMIN_FIJO.password, key, nuevaPassword.trim());
+  var res = await StudentRepository.adminChangePassword(adminPass(), key, nuevaPassword.trim());
   return { ok: !!(res && res.ok) };
  }
  async function alternarActivo(usuario) {
   var key = normUser(usuario);
-  var res = await StudentRepository.adminToggleActive(ADMIN_FIJO.password, key);
+  var res = await StudentRepository.adminToggleActive(adminPass(), key);
   return { ok: !!(res && res.ok), activo: res && res.activo };
  }
  async function eliminarAlumno(usuario) {
   var key = normUser(usuario);
-  var res = await StudentRepository.adminDeleteStudent(ADMIN_FIJO.password, key);
+  var res = await StudentRepository.adminDeleteStudent(adminPass(), key);
   return { ok: !!(res && res.ok) };
  }
 
@@ -260,7 +265,12 @@ var LoginOnboarding = (function () {
    errEl.hidden = true;
 
    if (key === "admin") {
-    if (pass !== ADMIN_FIJO.password) { errEl.textContent = "Usuario o contraseña incorrectos."; errEl.hidden = false; return; }
+    boton.disabled = true; var txtAdm = boton.textContent; boton.textContent = "Entrando…";
+    var okAdm = await StudentRepository.adminVerificar(pass);
+    boton.disabled = false; boton.textContent = txtAdm;
+    if (okAdm === null) { errEl.textContent = "No se pudo verificar. Revisa tu internet e inténtalo otra vez."; errEl.hidden = false; return; }
+    if (!okAdm) { errEl.textContent = "Usuario o contraseña incorrectos."; errEl.hidden = false; return; }
+    guardarAdminPass(pass);
     guardarSesion("admin");
     entrarComo("admin", ADMIN_FIJO, cont);
     return;
@@ -445,7 +455,10 @@ var LoginOnboarding = (function () {
  function init(continuarConLaApp) {
   if (typeof window.aplicarConfigVoz === "function") window.aplicarConfigVoz();
   var ses = leerSesion();
-  if (ses && ses.usuario === "admin") { entrarComo("admin", ADMIN_FIJO, continuarConLaApp); return; }
+  if (ses && ses.usuario === "admin") {
+   if (adminPass()) { entrarComo("admin", ADMIN_FIJO, continuarConLaApp); return; }
+   borrarSesion(); // sin contraseña en esta pestaña: se vuelve a pedir
+  }
   if (ses) {
    // Offline-first: si ya teníamos una copia local de este alumno (de la
    // última vez que se sincronizó en este dispositivo), entra directo
@@ -462,6 +475,7 @@ var LoginOnboarding = (function () {
  // progreso de nadie en la nube.
  function cerrarSesion() {
   borrarSesion();
+  try { sessionStorage.removeItem(CLAVE_ADMIN_PW); } catch (_) {}
   window.location.hash = "";
   window.location.reload();
  }

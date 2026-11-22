@@ -271,6 +271,15 @@ var StudentRepository = (function () {
   return r.data;
  }
 
+ // Verifica la contraseña de admin contra Supabase. true / false / null (sin red).
+ async function adminVerificar(adminPassword) {
+  var r = await rpc("admin_alumnos_nuevos", { p_admin_password: adminPassword });
+  if (r.ok) return true;
+  if (r.offline || !r.error) return null;
+  var m = String((r.error && (r.error.message || r.error)) || "");
+  return /No autorizado/i.test(m) ? false : null;
+ }
+
  // Consentimiento de padres/tutores (menores de 18). Se guarda quién
  // autorizó, su parentesco y cuándo, en la tabla consentimientos_tutor.
  async function registrarConsentimiento(usuario, edad, tutorNombre, parentesco) {
@@ -348,6 +357,7 @@ var StudentRepository = (function () {
   adminToggleActive: adminToggleActive,
   adminDeleteStudent: adminDeleteStudent,
   completeOnboarding: completeOnboarding,
+  adminVerificar: adminVerificar,
   registrarConsentimiento: registrarConsentimiento,
   tieneConsentimiento: tieneConsentimiento,
   updateProgress: updateProgress,
