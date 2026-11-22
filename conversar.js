@@ -243,7 +243,7 @@
    "<say>your reply in English + ONE easy follow-up question</say>",
    "<fix>only if the student's last message had a real mistake: one short tip in Spanish with the correct English sentence; else empty</fix>",
    "<try>a natural sentence the student could say next, in English</try>",
-   "<mem>updated short notes (max 180 chars) of interests/facts the student shared; keep earlier ones that matter</mem>",
+   "<mem>updated short notes (max 180 chars): start with 'Level: <your CEFR estimate A1-C2>;' then interests/facts the student shared; keep earlier ones that matter</mem>",
    "Rules: if the student writes Spanish or seems lost, answer in simple English and add the Spanish meaning in parentheses inside <say>. If the student wrote in Spanish, put in <fix> a short line like: En inglés se dice: '...' (the English version of what they said), so they learn it. Be warm, never mock mistakes. Do not translate everything. Stay on English practice. Never ask for personal data (address, phone, passwords, payments)."
   ].filter(Boolean).join("\n");
  }
