@@ -16,6 +16,7 @@
    esa lógica aquí.
    ========================================================================== */
 "use strict";
+var moderacion = require("./_moderacion");
 
 /* Clave de Google AI Studio / Gemini API. NUNCA se escribe en el código:
    vive solo en Vercel (Project Settings → Environment Variables →
@@ -153,6 +154,15 @@ module.exports = async function handler(req, res) {
    res.status(400).json({ error: { message: "Solicitud no válida." } });
    return;
   }
+  /* Moderación: respuestas fijas para riesgo/datos personales y reglas de
+     seguridad + adaptación de nivel agregadas en el servidor. */
+  var fija = moderacion.respuestaFija(body);
+  if (fija) {
+   console.log("[moderacion] " + fija.motivo);
+   res.status(200).json({ candidates: [{ content: { parts: [{ text: fija.texto }] } }] });
+   return;
+  }
+  body = moderacion.reforzar(body);
   if (excedeLimite(req)) {
    res.status(429).json({ error: { message: "Demasiados mensajes. Espera un momento." } });
    return;
