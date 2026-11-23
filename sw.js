@@ -10,7 +10,7 @@
 /* Sube este número cuando cambie el contenido cacheado (index.html,
    íconos, manifest) para forzar a los dispositivos a bajar la versión
    nueva en el siguiente arranque. */
-var CACHE_VERSION = "evo-english-v75";
+var CACHE_VERSION = "evo-english-v78";
 var APP_SHELL = [
  "./",
  "./index.html",
@@ -25,6 +25,8 @@ var APP_SHELL = [
  "./conversar.js",
  "./guias.js",
  "./legal.js",
+ "./juice.js",
+ "./tema.js",
  "./supabaseRepo.js",
  "./retosRepo.js",
  "./icons/icon-192.png",

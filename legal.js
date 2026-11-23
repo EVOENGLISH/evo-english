@@ -86,7 +86,7 @@
   var rk = menor
    ? '<div class="set"><span>Aparecer en la clasificación</span><span class="kick">No disponible para menores</span></div>'
    : '<div class="set"><span>Aparecer en la clasificación</span><button type="button" class="pill-toggle' + (rankingActivo() ? ' on' : '') + '" data-a="ranking-toggle" aria-pressed="' + rankingActivo() + '">' + (rankingActivo() ? 'Sí' : 'No') + '</button></div>';
-  return '<div class="card" style="margin-top:14px">' + rk
+  return '<div class="card" style="margin-top:14px">' + (window.EvoTema ? window.EvoTema.filaPerfil() : '') + rk
    + '<div class="set"><span>Información legal</span><span class="kick"><a href="privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="terminos.html" target="_blank" rel="noopener">Términos</a> · <a href="autorizacion.html" target="_blank" rel="noopener">Menores</a></span></div>'
    + '<div class="set"><span>Soporte</span><span class="kick"><a href="mailto:' + CORREO + '">' + CORREO + '</a></span></div></div>';
  }
