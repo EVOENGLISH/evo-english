@@ -242,6 +242,9 @@ var LoginOnboarding = (function () {
    + '<input class="auth-input" id="login-user" name="usuario" type="text" autocomplete="username" required placeholder="Tu usuario">'
    + '<label class="auth-label" for="login-pass">Contraseña</label>'
    + '<input class="auth-input" id="login-pass" name="password" type="password" autocomplete="current-password" required placeholder="Tu contraseña">'
+   + '<label id="login-acepto-w" style="display:flex;gap:10px;align-items:flex-start;margin:14px 0 4px;color:#EAF2FF;font-size:13.5px;line-height:1.45;cursor:pointer">'
+   + '<input type="checkbox" id="login-acepto" style="width:22px;height:22px;flex:none;margin-top:1px">'
+   + '<span>Acepto los <a href="terminos.html" target="_blank" rel="noopener" style="color:#7FB2FF">Términos y Condiciones</a> y el <a href="privacidad.html" target="_blank" rel="noopener" style="color:#7FB2FF">Aviso de Privacidad</a>, y confirmo que tengo la edad necesaria o la <a href="autorizacion.html" target="_blank" rel="noopener" style="color:#7FB2FF">autorización de mi madre, padre o tutor</a>.</span></label>'
    + '<p class="auth-err" id="login-err" hidden></p>'
    + '<button type="submit" class="auth-btn3d">Iniciar Sesión</button>'
    + '</form>'
@@ -262,6 +265,9 @@ var LoginOnboarding = (function () {
    var pass = document.getElementById("login-pass").value.trim();
    var errEl = document.getElementById("login-err"), boton = form.querySelector("button[type=submit]");
    if (!key || !pass) { errEl.textContent = "Escribe tu usuario y contraseña para continuar."; errEl.hidden = false; return; }
+   var yaAcepto = false; try { yaAcepto = localStorage.getItem("evoLegalOk:" + key + ":" + VER_LEGAL) === "1"; } catch (_) {}
+   var marcada = !!document.getElementById("login-acepto").checked;
+   if (key !== "admin" && !marcada && !yaAcepto) { errEl.textContent = "Para entrar, marca la casilla de Términos y Aviso de Privacidad."; errEl.hidden = false; return; }
    errEl.hidden = true;
 
    if (key === "admin") {
@@ -288,6 +294,10 @@ var LoginOnboarding = (function () {
    var u = filaAUsuario(fila);
    if (u.activo === false) { errEl.textContent = "Tu acceso está pausado. Contacta a la escuela para reactivarlo."; errEl.hidden = false; return; }
    guardarSesion(key);
+   if (marcada || yaAcepto) {
+    var okAc = marcada ? await StudentRepository.guardarAceptaciones(key, VER_LEGAL, { terminos: true, privacidad: true, edad: true }) : true;
+    if (okAc) { try { localStorage.setItem("evoLegalOk:" + key + ":" + VER_LEGAL, "1"); } catch (_) {} }
+   }
    entrarComo(key, u, cont);
   });
  }
@@ -304,19 +314,52 @@ var LoginOnboarding = (function () {
    });
    return;
   }
-  if (!u.onboardingCompleto) { pintarPaso1(key, u, cont); return; }
-  if (u.edad && u.edad < 18) {
-   var yaLocal = false; try { yaLocal = localStorage.getItem("evoConsent:" + key) === "1"; } catch (_) {}
-   if (!yaLocal) {
-    StudentRepository.tieneConsentimiento(key).then(function (tiene) {
-     if (tiene === false) { datos = { key: key, nombre: u.nombre, edad: u.edad }; pintarConsentimiento(cont, function () { entrarComo(key, u, cont); }); }
-     else { if (tiene) { try { localStorage.setItem("evoConsent:" + key, "1"); } catch (_) {} } continuarEntrada(key, u, cont); }
-    });
-    return;
-   }
-  }
-  continuarEntrada(key, u, cont);
+  verificarLegal(key, u, function () {
+   if (!u.onboardingCompleto) { pintarPaso1(key, u, cont); return; }
+   continuarEntrada(key, u, cont);
+  });
  }
+
+ // Pantalla de aceptación de Términos, Aviso de Privacidad y edad/autorización.
+ // Se muestra una vez por versión de los documentos; queda registrada en Supabase.
+ var VER_LEGAL = "2026-11-22";
+ function verificarLegal(key, u, siguiente) {
+  var marca = "evoLegalOk:" + key + ":" + VER_LEGAL, ya = false;
+  try { ya = localStorage.getItem(marca) === "1"; } catch (_) {}
+  if (ya) { siguiente(); return; }
+  StudentRepository.estadoLegal(key, VER_LEGAL).then(function (est) {
+   if (est === null) { siguiente(); return; } // sin conexión: no se bloquea la práctica
+   try { if (est.voz) localStorage.setItem("evoVoz:" + key, "1"); localStorage.setItem("evoRank:" + key, est.ranking ? "1" : "0"); } catch (_) {}
+   if (est.terminos && est.privacidad && est.edad) { try { localStorage.setItem(marca, "1"); } catch (_) {} siguiente(); return; }
+   pintarLegal(key, u, marca, siguiente);
+  });
+ }
+ function pintarLegal(key, u, marca, siguiente) {
+  var adulto = !!(u.edad && u.edad >= 18);
+  contenedor().innerHTML = '<div class="auth-card ob-card">'
+   + '<div class="auth-mascota">' + rostroLevo(64) + '<div class="auth-globo">Antes de empezar</div></div>'
+   + '<p style="color:#EAF2FF;font-size:15px;line-height:1.5;margin:8px 0 6px">Para usar EVO ENGLISH necesitamos que leas y aceptes lo siguiente:</p>'
+   + '<form id="ob-legal" novalidate style="color:#EAF2FF;font-size:14.5px;line-height:1.45">'
+   + '<label style="display:flex;gap:10px;align-items:flex-start;margin:12px 0;cursor:pointer"><input type="checkbox" id="lg1" style="width:22px;height:22px;flex:none"><span>He leído y acepto los <a href="terminos.html" target="_blank" rel="noopener" style="color:#7FB2FF">Términos y Condiciones</a>.</span></label>'
+   + '<label style="display:flex;gap:10px;align-items:flex-start;margin:12px 0;cursor:pointer"><input type="checkbox" id="lg2" style="width:22px;height:22px;flex:none"><span>He leído el <a href="privacidad.html" target="_blank" rel="noopener" style="color:#7FB2FF">Aviso de Privacidad</a> y comprendo cómo se tratan mis datos personales.</span></label>'
+   + '<label style="display:flex;gap:10px;align-items:flex-start;margin:12px 0;cursor:pointer"><input type="checkbox" id="lg3" style="width:22px;height:22px;flex:none"><span>Confirmo que tengo la edad necesaria para registrarme, o que cuento con la <a href="autorizacion.html" target="_blank" rel="noopener" style="color:#7FB2FF">autorización de mi madre, padre o tutor legal</a>.</span></label>'
+   + (adulto ? '<label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0 4px;cursor:pointer;opacity:.95"><input type="checkbox" id="lg4" style="width:22px;height:22px;flex:none"><span><b>(Opcional)</b> Quiero aparecer en la clasificación de EVO ENGLISH con mi nombre de usuario, puntos, racha y nivel. Puedo cambiarlo cuando quiera en Perfil.</span></label>' : '')
+   + '<p class="auth-err" id="ob-errl" hidden>Marca las tres casillas obligatorias para continuar.</p>'
+   + '<button type="submit" class="auth-btn3d">Aceptar y continuar</button></form></div>';
+  document.getElementById("ob-legal").addEventListener("submit", async function (ev) {
+   ev.preventDefault();
+   var err = document.getElementById("ob-errl");
+   if (!(document.getElementById("lg1").checked && document.getElementById("lg2").checked && document.getElementById("lg3").checked)) { err.textContent = "Marca las tres casillas obligatorias para continuar."; err.hidden = false; return; }
+   var b = ev.target.querySelector("button"); b.disabled = true; b.textContent = "Guardando…";
+   var rk = !!(document.getElementById("lg4") && document.getElementById("lg4").checked);
+   var items = { terminos: true, privacidad: true, edad: true }; if (adulto) items.ranking = rk;
+   var ok = await StudentRepository.guardarAceptaciones(key, VER_LEGAL, items);
+   if (!ok) { b.disabled = false; b.textContent = "Aceptar y continuar"; err.textContent = "No se pudo guardar. Revisa tu internet e inténtalo de nuevo."; err.hidden = false; return; }
+   try { localStorage.setItem(marca, "1"); localStorage.setItem("evoRank:" + key, rk ? "1" : "0"); } catch (_) {}
+   siguiente();
+  });
+ }
+
  function continuarEntrada(key, u, cont) {
   quitarOverlay();
   window.cargarProgParaUsuario(key);
@@ -370,7 +413,7 @@ var LoginOnboarding = (function () {
    var edad = parseInt(document.getElementById("ob-edad").value, 10);
    if (!edad || edad < 3 || edad > 99) { document.getElementById("ob-err2").hidden = false; return; }
    datos.edad = edad;
-   if (edad < 18) pintarConsentimiento(cont, function () { pintarPaso3(cont); }); else pintarPaso3(cont);
+   pintarPaso3(cont);
   });
  }
 

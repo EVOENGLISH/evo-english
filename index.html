@@ -2504,6 +2504,7 @@ function unitView(lv,n){var us=UNITS[lv]||UNITS.A1,u=us[n-1];if(!u)return unitsV
 <script src="panelAdmin.js"></script>
 <script src="levo-chat.js"></script>
 <script src="conversar.js"></script>
+<script src="legal.js"></script>
 <script src="guias.js"></script>
 <script>
 /* Continúa el script principal de la app (router, Lecciones, Reader,
@@ -3021,6 +3022,7 @@ function micMsg(code){
  return"No te escuché. Acércate al micrófono, habla un poco más fuerte y vuelve a intentar."}
 function startMicWith(ctx){MICCTX=ctx;
  if(MICREC){try{MICREC.__stop()}catch(_){}return} // segundo toque = terminar
+ if(window.EvoLegal&&!window.EvoLegal.vozOk()){window.EvoLegal.pedirVoz(function(){startMicWith(ctx)});return}
  if(inIframe()){showMicModal();return}
  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(EvoRec.usar()){recFlow(ctx);return}
@@ -3940,7 +3942,7 @@ function cargarClasificacionAsync(){
  StudentRepository.obtenerClasificacion(20).then(function(r){
   var el2=document.getElementById("clasif-list");if(!el2)return; // el alumno ya cambió de pantalla
   if(!r.ok){el2.innerHTML='<p class="es2">No se pudo conectar con la nube. Intenta de nuevo en un momento.</p>';return}
-  if(!r.lista.length){el2.innerHTML='<p class="es2">Todavía no hay alumnos con puntos — ¡sé el primero en aparecer aquí!</p>';return}
+  if(!r.lista.length){el2.innerHTML='<p class="es2">Todavía nadie participa en la clasificación. Si eres mayor de edad, actívala en tu Perfil para aparecer aquí.</p>';return}
   el2.innerHTML=r.lista.map(clasifFilaHTML).join("");
  }).catch(function(){var el2=document.getElementById("clasif-list");if(el2)el2.innerHTML='<p class="es2">No se pudo conectar con la nube. Intenta de nuevo en un momento.</p>'});
 }
@@ -4075,7 +4077,9 @@ perfil:function(){var lv=activeLevel(),u=cur();
   +'<div class="set"><span>Recordatorios</span><span class="kick">Pronto</span></div></div>'
   // Botón para volver a la pantalla de login/onboarding (p.ej. si otro
   // alumno va a usar el mismo dispositivo): borra el perfil guardado.
-  +'<button type="button" class="btn ghost" data-a="cerrar-sesion" style="margin-top:18px;width:100%">'+ic("lock",18)+' Cerrar sesión</button>'}
+  +(window.EvoLegal?window.EvoLegal.seccionPerfil():"")
+  +'<button type="button" class="btn ghost" data-a="cerrar-sesion" style="margin-top:18px;width:100%">'+ic("lock",18)+' Cerrar sesión</button>'
+  +(window.EvoLegal?window.EvoLegal.botonEliminar():"")}
 };
 var SB='<a class="sb" href="#/inicio"><img src="'+LOGO+'" alt="EVO English"></a>';
 var ROUTE=["inicio"];
@@ -4145,6 +4149,8 @@ document.addEventListener("click",function(e){
  }
  else if(a=="ir-aventura")navigateToAdventure();
  else if(a=="cerrar-sesion")LoginOnboarding.cerrarSesion();
+ else if(a=="eliminar-cuenta"){if(window.EvoLegal)window.EvoLegal.abrirEliminar()}
+ else if(a=="ranking-toggle"){if(window.EvoLegal)window.EvoLegal.alternarRanking(function(){go()})}
  else if(a=="toggle-sound"){toggleSound();go()}
  else if(a=="rres-cont"){RetoEngine.vibrar(50);if(x.dataset.dest)location.hash=x.dataset.dest}
  else if(a&&a.indexOf("av-")===0)AventuraEngine.accion(a,x);

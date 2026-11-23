@@ -595,6 +595,7 @@ function recToggle() {
  function micToggle() {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (S.busy) return;
+  if (!S.recCtl && !S.rec && window.EvoLegal && !window.EvoLegal.vozOk()) { window.EvoLegal.pedirVoz(function () { micToggle(); }); return; }
   if (window.EvoRec && window.EvoRec.ok() && (window.EvoRec.usar() || !SR)) { recToggle(); return; }
   if (!SR) { nota("Este navegador no puede grabar tu voz. Abre la app en Chrome o Safari."); return; }
   if (S.rec) { S.manual = true; try { S.rec.stop(); } catch (e) {} return; }   // 2.º toque: terminar y enviar

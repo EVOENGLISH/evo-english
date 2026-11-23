@@ -282,6 +282,20 @@ var StudentRepository = (function () {
   return r.data;
  }
 
+ 
+ // Aceptaciones legales, ranking opcional y eliminación de cuenta (con el pase personal).
+ async function estadoLegal(usuario, version) { var r = await rpc("estado_legal_s", { p_token: tokenDe(usuario), p_version: version }); return r.ok ? (r.data || null) : null; }
+ async function guardarAceptaciones(usuario, version, items) { var r = await rpc("registrar_aceptaciones_s", { p_token: tokenDe(usuario), p_version: version, p_items: items }); return !!(r.ok && r.data === true); }
+ async function fijarRanking(usuario, visible) { var r = await rpc("ranking_s", { p_token: tokenDe(usuario), p_visible: !!visible }); return !!(r.ok && r.data === true); }
+ async function eliminarMiCuenta(usuario, password) {
+  var r = await rpc("eliminar_mi_cuenta_s", { p_token: tokenDe(usuario), p_password: (password || "").trim() });
+  if (!(r.ok && r.data === true)) return false;
+  borrarToken(usuario);
+  var key = (usuario || "").trim().toLowerCase();
+  guardarCache(leerCache().filter(function (f) { return (f.usuario || "").toLowerCase() !== key; }));
+  return true;
+ }
+
  // Verifica la contraseña de admin contra Supabase. true / false / null (sin red).
  async function adminVerificar(adminPassword) {
   var r = await rpc("admin_alumnos_nuevos", { p_admin_password: adminPassword });
@@ -371,6 +385,10 @@ var StudentRepository = (function () {
   tokenDe: tokenDe,
   borrarToken: borrarToken,
   adminVerificar: adminVerificar,
+  estadoLegal: estadoLegal,
+  guardarAceptaciones: guardarAceptaciones,
+  fijarRanking: fijarRanking,
+  eliminarMiCuenta: eliminarMiCuenta,
   registrarConsentimiento: registrarConsentimiento,
   tieneConsentimiento: tieneConsentimiento,
   updateProgress: updateProgress,
