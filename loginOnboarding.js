@@ -459,6 +459,10 @@ var LoginOnboarding = (function () {
    if (adminPass()) { entrarComo("admin", ADMIN_FIJO, continuarConLaApp); return; }
    borrarSesion(); // sin contraseña en esta pestaña: se vuelve a pedir
   }
+  if (ses && ses.usuario !== "admin" && !StudentRepository.tokenDe(ses.usuario)) {
+   // Sesión de antes del "pase personal": se pide entrar otra vez (una sola vez).
+   borrarSesion(); ses = null;
+  }
   if (ses) {
    // Offline-first: si ya teníamos una copia local de este alumno (de la
    // última vez que se sincronizó en este dispositivo), entra directo
@@ -474,6 +478,7 @@ var LoginOnboarding = (function () {
  // cierra la sesión de ESTE dispositivo -- no borra la cuenta ni el
  // progreso de nadie en la nube.
  function cerrarSesion() {
+  try { var sx = leerSesion(); if (sx && sx.usuario) StudentRepository.borrarToken(sx.usuario); } catch (_) {}
   borrarSesion();
   try { sessionStorage.removeItem(CLAVE_ADMIN_PW); } catch (_) {}
   window.location.hash = "";

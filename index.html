@@ -2720,7 +2720,7 @@ function ttsProvider(){if(ELEVENLABS_API_KEY)return "elevenlabs";if(OPENAI_API_K
 async function fetchTTSAudio(text){var key=ttsProvider()+":"+(window.__evoVoz||"")+":"+text;if(TTS_CACHE[key])return TTS_CACHE[key];var url=null;
  try{
   if(ttsProvider()=="server"){
-   var tv0=performance.now();var pedir=function(){return fetch("/api/voz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text,voice:window.__evoVoz||""})})};
+   var tv0=performance.now();var pedir=function(){return fetch("/api/voz",{method:"POST",headers:{"Content-Type":"application/json","x-evo-token":(window.evoToken&&window.evoToken())||""},body:JSON.stringify({text:text,voice:window.__evoVoz||""})})};
    var rs=await pedir();
    if(!rs.ok){await new Promise(function(r){setTimeout(r,700)});rs=await pedir()}
    if(!rs.ok){VOZ_OFF_HASTA=Date.now()+45000;throw new Error("voz_"+rs.status)}
@@ -2985,7 +2985,7 @@ var EvoRec=(function(){
     if(o.onState)o.onState("Procesando tu voz…");
     var fr=new FileReader();
     fr.onload=function(){var b64=String(fr.result).split(",")[1]||"";
-     fetch("/api/escuchar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({audio:b64,mime:blob.type,lang:o.lang||"en"})})
+     fetch("/api/escuchar",{method:"POST",headers:{"Content-Type":"application/json","x-evo-token":(window.evoToken&&window.evoToken())||""},body:JSON.stringify({audio:b64,mime:blob.type,lang:o.lang||"en"})})
       .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
       .then(function(j){var t=j&&String(j.text||"").trim();if(t)o.onText(t);else o.onError(NOHEAR)})
       .catch(function(){o.onError("No pude procesar tu voz. Revisa tu internet e intenta de nuevo.")})};

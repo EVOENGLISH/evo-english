@@ -263,7 +263,7 @@
   for (var i = 0; i < 2; i++) {
    try {
     var ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, 28000), r;
-    try { r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: ctl.signal }); }
+    try { r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json", "x-evo-token": (window.evoToken && window.evoToken()) || "" }, body: JSON.stringify(payload), signal: ctl.signal }); }
     finally { clearTimeout(t); }
     ult = r.status;
     var d = await r.json().catch(function () { return {}; });

@@ -52,6 +52,12 @@ var StudentRepository = (function () {
  // global, sobrescribiríamos ese mismo objeto global y romperíamos la
  // librería para cualquier otro código que la necesite después.
  var cliente = null;
+// Pase personal del alumno (se guarda en este dispositivo).
+ function tokenDe(usuario) { try { return localStorage.getItem("evoTok:" + String(usuario || "").toLowerCase().trim()) || ""; } catch (_) { return ""; } }
+ function guardarToken(usuario, t) { try { localStorage.setItem("evoTok:" + String(usuario || "").toLowerCase().trim(), t); } catch (_) {} }
+ function borrarToken(usuario) { try { localStorage.removeItem("evoTok:" + String(usuario || "").toLowerCase().trim()); } catch (_) {} }
+ window.evoToken = function () { try { var u = window.USUARIO_ACTUAL; return u && u.usuario ? tokenDe(u.usuario) : ""; } catch (_) { return ""; } };
+
  function obtenerCliente() {
   if (cliente) return cliente;
   if (window.supabase && typeof window.supabase.createClient === "function") {
@@ -158,6 +164,11 @@ var StudentRepository = (function () {
    return null;
   }
   var fila = (r.data && r.data[0]) || null;
+  if (fila) {
+   var rs = await rpc("crear_sesion", { p_usuario: (usuario || "").trim(), p_password: (password || "").trim() });
+   if (rs.ok && rs.data) guardarToken(usuario, rs.data);
+   else avisar("Entraste, pero no se pudo asegurar tu sesión. Si el progreso no se guarda, vuelve a entrar.");
+  }
   if (fila) mezclarEnCache(fila); // permite reingresar sin conexión después
   return fila; // null si el usuario/contraseña no coinciden
  }
@@ -254,8 +265,8 @@ var StudentRepository = (function () {
  // (no pide contraseña de admin): sólo modifica su propia fila y son
  // datos de bajo riesgo (nombre confirmado, edad, meta diaria).
  async function completeOnboarding(usuario, datos) {
-  var r = await rpc("completar_onboarding", {
-   p_usuario: usuario, p_nombre: datos.nombre || null,
+  var r = await rpc("completar_onboarding_s", {
+   p_token: tokenDe(usuario), p_nombre: datos.nombre || null,
    p_edad: datos.edad != null ? datos.edad : null, p_meta_minutos: datos.metaMinutos != null ? datos.metaMinutos : null
   });
   if (!r.ok) { avisar("No se pudo guardar tu perfil en la nube (seguirás viéndolo en este dispositivo)."); return { ok: false }; }
@@ -283,12 +294,12 @@ var StudentRepository = (function () {
  // Consentimiento de padres/tutores (menores de 18). Se guarda quién
  // autorizó, su parentesco y cuándo, en la tabla consentimientos_tutor.
  async function registrarConsentimiento(usuario, edad, tutorNombre, parentesco) {
-  var r = await rpc("registrar_consentimiento", { p_usuario: usuario, p_edad: edad, p_tutor_nombre: tutorNombre, p_parentesco: parentesco || null, p_version: "v1" });
+  var r = await rpc("registrar_consentimiento_s", { p_token: tokenDe(usuario), p_edad: edad, p_tutor_nombre: tutorNombre, p_parentesco: parentesco || null, p_version: "v1" });
   return !!(r.ok && r.data === true);
  }
  // Devuelve true / false, o null si no se pudo consultar (sin red).
  async function tieneConsentimiento(usuario) {
-  var r = await rpc("tiene_consentimiento", { p_usuario: usuario });
+  var r = await rpc("tiene_consentimiento_s", { p_token: tokenDe(usuario) });
   return r.ok ? r.data === true : null;
  }
 
@@ -301,8 +312,8 @@ var StudentRepository = (function () {
  // sube "racha_record" (el récord personal) cuando corresponde. Ver
  // migración "gamificacion_fase1_rachas_insignias_clasificacion".
  async function updateProgress(usuario, progressData) {
-  var r = await rpc("actualizar_progreso", {
-   p_usuario: usuario,
+  var r = await rpc("actualizar_progreso_s", {
+   p_token: tokenDe(usuario),
    p_nivel: progressData.nivel != null ? progressData.nivel : null,
    p_xp: progressData.xp != null ? progressData.xp : null,
    p_racha: progressData.racha != null ? progressData.racha : null,
@@ -323,7 +334,7 @@ var StudentRepository = (function () {
  // se llama justo después de iniciar sesión, para traer lo que ya tenía
  // guardado en la nube sin tener que tocar login_alumno.
  async function obtenerPerfilGamificacion(usuario) {
-  var r = await rpc("perfil_gamificacion", { p_usuario: usuario });
+  var r = await rpc("perfil_gamificacion_s", { p_token: tokenDe(usuario) });
   if (!r.ok) return null;
   var fila = (r.data && r.data[0]) || null;
   return fila; // {racha_record, insignias} o null si no hay conexión
@@ -357,6 +368,8 @@ var StudentRepository = (function () {
   adminToggleActive: adminToggleActive,
   adminDeleteStudent: adminDeleteStudent,
   completeOnboarding: completeOnboarding,
+  tokenDe: tokenDe,
+  borrarToken: borrarToken,
   adminVerificar: adminVerificar,
   registrarConsentimiento: registrarConsentimiento,
   tieneConsentimiento: tieneConsentimiento,

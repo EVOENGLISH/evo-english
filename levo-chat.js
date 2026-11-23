@@ -261,7 +261,7 @@
     var ctl = new AbortController();
     var timer = setTimeout(function () { ctl.abort(); }, 28000);
     var r;
-    try { r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: cuerpo, signal: ctl.signal }); }
+    try { r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json", "x-evo-token": (window.evoToken && window.evoToken()) || "" }, body: cuerpo, signal: ctl.signal }); }
     finally { clearTimeout(timer); }
     ultimo = r.status;
     var data = await r.json().catch(function () { return {}; });
