@@ -54,6 +54,31 @@
   ".micbtn:active{transform:translateY(5px);box-shadow:0 0 0 var(--jz-blue-lip)!important}",
   ".micbtn.rec{box-shadow:0 5px 0 var(--jz-red-lip)!important}",
 
+  /* REPRODUCTOR DE LECCION: sólido, vivo, con cuerpo */
+  ".rcard{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border:2px solid #D3E0F4!important;border-bottom-width:5px!important;border-radius:22px!important;box-shadow:0 10px 24px rgba(0,60,160,.10)!important}",
+  ".rcard h2.q,.rcard h2{color:#0B1B33!important;font-weight:800}",
+  ".op{background:#fff!important;border:2px solid #C3D4EE!important;border-bottom:5px solid #9DB6DC!important;font-weight:700;font-size:17px;color:#0B1B33}",
+  ".op:hover{border-color:#6EA2FF!important;background:#F4F8FF!important}",
+  ".op b{background:#E3ECFB;color:#0B3A8A;border-radius:10px;min-width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;font-weight:900}",
+  ".op.sel{border-color:#0066FF!important;border-bottom-color:#0049B8!important;background:#E6F0FF!important}",
+  ".op.ok{border-color:#12A85F!important;border-bottom-color:#0B7A43!important;background:#D8F5E5!important}",
+  ".op.bad{border-color:#E5484D!important;border-bottom-color:#B02A2F!important;background:#FFE3E3!important}",
+  ".rcheck{background:linear-gradient(180deg,#2F8BFF 0%,#0066FF 100%)!important;color:#fff!important;border:0!important;border-radius:18px!important;min-height:60px!important;font-weight:900!important;font-size:18px!important;letter-spacing:.07em;text-transform:uppercase;box-shadow:0 6px 0 #0049B8!important}",
+  ".rcheck:not(:disabled):active{transform:translateY(6px);box-shadow:0 0 0 #0049B8!important}",
+  ".rcheck:disabled{background:#D5DDEA!important;color:#8896AD!important;box-shadow:0 6px 0 #B4C0D3!important}",
+  ".rcheck::after{left:18px;right:18px;top:8px;height:6px;background:rgba(255,255,255,.38)}",
+  ".rcheck-wrap{background:transparent!important}",
+  "body.modo-enfocado .rcheck-wrap{background:var(--bg,#F8FAFC)!important;border-top:2px solid #D3E0F4;padding-top:14px}",
+  ".rfoot .btn:not(.ghost){background:linear-gradient(180deg,#2F8BFF,#0066FF);color:#fff}",
+
+  ".run:has(.op,.discrim-op,.wd,.micbtn)>.rw-wolf{display:none!important}",
+
+  ".rcheck[data-jz=\"verde\"]{background:linear-gradient(180deg,#34D17F 0%,#12A85F 100%)!important;box-shadow:0 6px 0 #0B7A43!important}",
+  ".rcheck[data-jz=\"verde\"]:not(:disabled):active{box-shadow:0 0 0 #0B7A43!important}",
+  ".rcheck[data-jz=\"naranja\"]{background:linear-gradient(180deg,#FFA23D 0%,#F77F00 100%)!important;box-shadow:0 6px 0 #B85A00!important}",
+  ".rcheck[data-jz=\"naranja\"]:not(:disabled):active{box-shadow:0 0 0 #B85A00!important}",
+  ".rcheck:disabled[data-jz]{background:#D5DDEA!important;box-shadow:0 6px 0 #B4C0D3!important}",
+
   /* TARJETAS Y HERRAMIENTAS QUE SE TOCAN */
   ".card[data-href],.tool,button.card{transition:transform .1s ease-out,box-shadow .1s ease-out;-webkit-tap-highlight-color:transparent}",
   ".card[data-href]:active,.tool:active,button.card:active{transform:translateY(3px) scale(.99)}",
@@ -273,9 +298,19 @@
   }
  }
 
+
+ var COLS = ["", "verde", "naranja"];
+ function colorBoton() {
+  var b = document.querySelector(".rcheck"); if (!b) return;
+  var i = document.querySelector(".rbar i"), w = i ? parseFloat(i.style.width) || 0 : 0;
+  var v = COLS[Math.round(w / 6) % 3] || "";
+  if (v) { if (b.getAttribute("data-jz") !== v) b.setAttribute("data-jz", v); }
+  else if (b.hasAttribute("data-jz")) b.removeAttribute("data-jz");
+ }
  function iniciar() {
   css();
   var mo = new MutationObserver(function (list) {
+   colorBoton();
    for (var i = 0; i < list.length; i++) {
     var m = list[i];
     if (m.type === "attributes") { reactClass(m.target); }
