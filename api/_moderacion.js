@@ -21,7 +21,7 @@ var NIVEL = [
 ].join("\n");
 
 var AUTOLESION = /(me quiero (morir|matar|suicidar)|quiero (morir|morirme|matarme|suicidarme|desaparecer)|no quiero vivir|quitarme la vida|hacerme da[nñ]o|cortarme las venas|i want to die|kill myself|suicide|self[- ]?harm|hurt myself|end my life)/i;
-var ABUSO = /(me (pega|golpea|toca|abusa)n?|abus(o|aron|a) de m[ií]|me hace(n)? da[nñ]o en casa|alguien me toca|someone touches me|hits me at home)/i;
+var ABUSO = /(me\s+(pega|pegan|pegaron|golpea|golpean|golpearon|toca|tocan|tocó|abusa|abusan|abusó|amenaza|amenazan|amenazó|lastima|lastiman|lastimó|acosa|acosan|hace\s+bullying)|(quiere|quieren|quería|querían|quiso|intent[oó]|intentan|van\s+a)\s+(golpear|pegar|lastimar|matar|hacer(me)?\s+da[nñ]o)(me)?|(golpear|pegar|lastimar|matar)me|abus(o|aron|a)\s+de\s+m[ií]|me\s+(da|dan)\s+miedo\s+(mi|en)\s+casa|alguien\s+me\s+(toc|pega|golpe|amenaz)|(someone|he|she|they|my\s+\w+)\s+(hits?|hurts?|touch(es)?|threatens?|wants?\s+to\s+(hit|hurt|kill))\s+me|me\s+bullying|bullying|acoso|me\s+acosan)/i;
 var TELEFONO = /(\+?\d[\d\s().-]{8,}\d)/;
 var CORREO = /[\w.+-]+@[\w-]+\.[\w.-]+/;
 var DIRECCION = /(vivo en la calle|mi direcci[oó]n es|my address is|i live at|calle\s+\w+\s+(n[uú]m|#)\s*\d+)/i;

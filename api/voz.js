@@ -1,3 +1,4 @@
+var cupo = require("./_cupo");
 // EVO ENGLISH · voz natural para LEVO (proxy seguro, las llaves viven en Vercel)
 // Orden: ElevenLabs (si pones ELEVENLABS_API_KEY) -> Gemini TTS (usa tu GEMINI_API_KEY) -> Groq Orpheus (usa GROQ_API_KEY)
 // Si todo falla responde 503 y la app usa la voz del navegador, el alumno nunca ve un error.
@@ -122,6 +123,8 @@ async function groq(texto) {
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
+  var cu = await cupo.usarCupo(req, "voz", 300);
+  if (!cu.ok) return res.status(cu.status).json({ error: { message: cu.mensaje } });
   const ip = String(req.headers["x-forwarded-for"] || "x").split(",")[0].trim();
   if (limite(ip)) return res.status(429).json({ error: "limite" });
   let texto = "", vozP = "";

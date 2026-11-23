@@ -1,3 +1,4 @@
+var cupo = require("./_cupo");
 // EVO ENGLISH · el alumno habla y esto lo convierte en texto (funciona en iPhone, Android y PC)
 // Usa tu GROQ_API_KEY (Whisper). La llave vive solo en Vercel.
 const hits = new Map();
@@ -10,6 +11,8 @@ function limite(ip) {
 }
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
+  var cu = await cupo.usarCupo(req, "escuchar", 150);
+  if (!cu.ok) return res.status(cu.status).json({ error: { message: cu.mensaje } });
   const key = process.env.GROQ_API_KEY;
   if (!key) return res.status(503).json({ error: "sin_llave" });
   const ip = String(req.headers["x-forwarded-for"] || "x").split(",")[0].trim();

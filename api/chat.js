@@ -17,6 +17,7 @@
    ========================================================================== */
 "use strict";
 var moderacion = require("./_moderacion");
+var cupo = require("./_cupo");
 
 /* Clave de Google AI Studio / Gemini API. NUNCA se escribe en el código:
    vive solo en Vercel (Project Settings → Environment Variables →
@@ -163,6 +164,8 @@ module.exports = async function handler(req, res) {
    return;
   }
   body = moderacion.reforzar(body);
+  var cu = await cupo.usarCupo(req, "chat", 200);
+  if (!cu.ok) { res.status(cu.status).json({ error: { message: cu.mensaje } }); return; }
   if (excedeLimite(req)) {
    res.status(429).json({ error: { message: "Demasiados mensajes. Espera un momento." } });
    return;
