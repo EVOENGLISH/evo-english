@@ -6,7 +6,7 @@
 (function () {
  "use strict";
  var VER = "2026-11-22";
- var CORREO = "evoenglishpalenque@gmail.com";
+ var CORREO = "evoenglishsupport@gmail.com";
 
  function usuario() { var u = window.USUARIO_ACTUAL; return u && u.usuario ? String(u.usuario).toLowerCase() : ""; }
  function esAdmin() { var u = window.USUARIO_ACTUAL; return !!(u && u.rol === "admin"); }
